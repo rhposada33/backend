@@ -7,6 +7,7 @@
 
 import { Router } from 'express';
 import { authMiddleware } from '../auth/index.js';
+import { tenantRouter } from '../modules/tenant/index.js';
 
 export const apiRouter = Router();
 
@@ -43,14 +44,15 @@ apiRouter.get('/me', authMiddleware, (_req, res) => {
   });
 });
 
+// Module routes
+apiRouter.use('/tenants', tenantRouter);
+
 // TODO: Import and register route modules as they are created
 // import { usersRouter } from './users/index.js';
-// import { tenantsRouter } from './tenants/index.js';
 // import { camerasRouter } from './cameras/index.js';
 // import { eventsRouter } from './events/index.js';
 
 // TODO: Register protected routes with authMiddleware
 // apiRouter.use('/users', authMiddleware, usersRouter);
-// apiRouter.use('/tenants', authMiddleware, tenantsRouter);
 // apiRouter.use('/cameras', authMiddleware, camerasRouter);
 // apiRouter.use('/events', authMiddleware, eventsRouter);
