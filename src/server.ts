@@ -1,86 +1,177 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 
-// Load environment variables
-dotenv.config();
+/**
+ * Initialize Express Server
+ * Multi-tenant SaaS backend for Sateliteyes Guard
+ */
 
-// Import configuration
-import { config } from './config/index.js';
-import { swaggerOptions } from './config/swagger.js';
+// Wrap in async IIFE to use top-level await
+(async () => {
+  // ============================================================================
+  // 1. LOAD ENVIRONMENT CONFIGURATION
+  // ============================================================================
+  dotenv.config();
 
-// Import middleware
-import { errorHandler, NotFoundError } from './middleware/errorHandler.js';
-import { requestLogger } from './middleware/requestLogger.js';
-import { tenantResolver } from './middleware/tenantResolver.js';
+  const { config } = await import('./config/index.js');
+  const { swaggerOptions } = await import('./config/swagger.js');
 
-// Import routes
-import { apiRouter } from './api/routes.js';
+  console.log('📋 Configuration loaded');
+  console.log(`   Node Environment: ${config.nodeEnv}`);
+  console.log(`   API Prefix: ${config.apiPrefix}/${config.apiVersion}`);
+  console.log(`   Multi-tenant mode: ${config.enableMultiTenant}`);
 
-// Create Express application
-const app = express();
+  // ============================================================================
+  // 2. INITIALIZE DATABASE
+  // ============================================================================
+  const { prisma } = await import('./db/client.js');
 
-// Middleware: Security
-app.use(helmet());
+  // Test database connection
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('✅ Database connection successful');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    process.exit(1);
+  }
 
-// Middleware: CORS
-app.use(
-  cors({
-    origin: config.corsOrigin,
-    credentials: true,
-  })
-);
+  // ============================================================================
+  // 3. IMPORT MIDDLEWARE
+  // ============================================================================
+  const { errorHandler } = await import('./middleware/errorHandler.js');
+  const { requestLogger } = await import('./middleware/requestLogger.js');
+  const { tenantResolver } = await import('./middleware/tenantResolver.js');
+  const { authMiddleware } = await import('./auth/middleware.js');
 
-// Middleware: Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+  console.log('📦 Middleware initialized');
 
-// Middleware: Request logging
-app.use(requestLogger);
+  // ============================================================================
+  // 4. IMPORT ROUTES
+  // ============================================================================
+  const { apiRouter } = await import('./api/routes.js');
 
-// Middleware: Tenant resolution (multi-tenant isolation)
-app.use(tenantResolver);
+  console.log('🛣️  Routes imported');
 
-// TODO: Initialize database connections
-// app.use(await initializeDatabase());
+  // ============================================================================
+  // 5. CREATE EXPRESS APPLICATION
+  // ============================================================================
+  const app = express();
 
-// Serve Swagger spec as JSON (before Swagger UI middleware)
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.get('/docs/swagger.json', (_req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
-});
+  console.log('🚀 Express application created');
 
-// Swagger Documentation UI
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  swaggerOptions: {
-    url: '/docs/swagger.json',
-  },
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Sateliteyes Guard API Documentation',
-}));
+  // ============================================================================
+  // 6. MIDDLEWARE STACK (in order)
+  // ============================================================================
 
-// Health check endpoint
-app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
-});
+  // Security headers
+  app.use(helmet());
 
-// API Routes (includes auth routes)
-app.use(`${config.apiPrefix}/${config.apiVersion}`, apiRouter);
+  // CORS configuration
+  app.use(
+    cors({
+      origin: config.corsOrigin,
+      credentials: true,
+    })
+  );
 
-// Middleware: Global error handler (MUST BE LAST)
-app.use(errorHandler);
+  // Body parsing
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
 
-// Start server
-const PORT = config.port;
+  // Request logging
+  app.use(requestLogger);
 
-app.listen(PORT, () => {
-  console.info(`🚀 Server is running on port ${PORT}`);
-  console.info(`📍 Environment: ${config.nodeEnv}`);
-  console.info(`🔒 Multi-tenant mode: ${config.enableMultiTenant}`);
-});
+  // Tenant resolution (multi-tenant isolation)
+  app.use(tenantResolver);
 
-export default app;
+  console.log('🔐 Middleware stack configured');
+
+  // ============================================================================
+  // 7. SWAGGER / OPENAPI DOCUMENTATION
+  // ============================================================================
+
+  const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+  // Serve Swagger JSON specification
+  app.get('/docs/swagger.json', (_req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+  });
+
+  // Serve Swagger UI
+  app.use(
+    '/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+      swaggerOptions: {
+        url: '/docs/swagger.json',
+      },
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'Sateliteyes Guard API Documentation',
+    })
+  );
+
+  console.log('📚 Swagger documentation mounted at /docs');
+
+  // ============================================================================
+  // 8. HEALTH CHECK ENDPOINT
+  // ============================================================================
+
+  app.get('/health', (_req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      environment: config.nodeEnv,
+      uptime: process.uptime(),
+    });
+  });
+
+  console.log('❤️  Health check endpoint ready');
+
+  // ============================================================================
+  // 9. MOUNT API ROUTERS
+  // ============================================================================
+
+  // Mount main API router (includes /auth, /tenants, /cameras, /events, /health)
+  app.use(`${config.apiPrefix}/${config.apiVersion}`, apiRouter);
+
+  console.log(`✅ API routers mounted at ${config.apiPrefix}/${config.apiVersion}`);
+  console.log('   - /auth (register, login)');
+  console.log('   - /tenants (GET, POST, GET/:id)');
+  console.log('   - /cameras (GET, POST, GET/:id, PUT, DELETE)');
+  console.log('   - /events (GET, POST, GET/:id, GET/byCamera/:cameraId)');
+
+  // ============================================================================
+  // 10. GLOBAL ERROR HANDLER (MUST BE LAST)
+  // ============================================================================
+
+  app.use(errorHandler);
+
+  console.log('🛡️  Error handler configured');
+
+  // ============================================================================
+  // 11. START SERVER
+  // ============================================================================
+
+  const PORT = config.port;
+
+  app.listen(PORT, () => {
+    console.log('');
+    console.log('╔════════════════════════════════════════════════════════════╗');
+    console.log('║         🚀 SATELITEYES GUARD BACKEND - RUNNING 🚀          ║');
+    console.log('╚════════════════════════════════════════════════════════════╝');
+    console.log('');
+    console.log(`📍 Server: http://localhost:${PORT}`);
+    console.log(`📚 Documentation: http://localhost:${PORT}/docs`);
+    console.log(`❤️  Health: http://localhost:${PORT}/health`);
+    console.log(`🔌 API: http://localhost:${PORT}${config.apiPrefix}/${config.apiVersion}`);
+    console.log('');
+    console.log(`Environment: ${config.nodeEnv}`);
+    console.log(`Multi-tenant: ${config.enableMultiTenant ? 'Enabled' : 'Disabled'}`);
+    console.log('');
+  });
+})();
