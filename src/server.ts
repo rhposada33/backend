@@ -16,6 +16,7 @@ import { tenantResolver } from './middleware/tenantResolver.js';
 
 // Import routes
 import { apiRouter } from './api/routes.js';
+import authRoutes from './routes/auth.js';
 
 // Create Express application
 const app = express();
@@ -49,10 +50,11 @@ app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Auth Routes (public)
+app.use('/auth', authRoutes);
+
 // API Routes
 app.use(`${config.apiPrefix}/${config.apiVersion}`, apiRouter);
-
-// TODO: Add additional routes for authentication, webhooks, etc.
 
 // Middleware: 404 handler
 app.use((_req, res) => {

@@ -2,26 +2,13 @@
  * API Routes
  * Main routing configuration for the API
  *
- * TODO: Add health check endpoint
- * TODO: Add authentication routes
- * TODO: Add user management routes
- * TODO: Add tenant management routes
- * TODO: Add business logic routes
+ * Protected routes require JWT authentication via authMiddleware
  */
 
 import { Router } from 'express';
+import { authMiddleware } from '../auth/index.js';
 
 export const apiRouter = Router();
-
-// TODO: Import and register route modules
-// import { authRouter } from './auth/index.js';
-// import { usersRouter } from './users/index.js';
-// import { tenantsRouter } from './tenants/index.js';
-
-// TODO: Register route modules
-// apiRouter.use('/auth', authRouter);
-// apiRouter.use('/users', usersRouter);
-// apiRouter.use('/tenants', tenantsRouter);
 
 // Health check endpoint (duplicate from server.ts can be removed)
 apiRouter.get('/health', (_req, res) => {
@@ -39,7 +26,31 @@ apiRouter.get('/', (_req, res) => {
     version: 'v1',
     endpoints: {
       health: '/health',
-      // TODO: List API endpoints as they are added
+      auth: {
+        register: 'POST /auth/register',
+        login: 'POST /auth/login',
+      },
+      protected: '(Use JWT token in Authorization header)',
     },
   });
 });
+
+// Protected route example
+apiRouter.get('/me', authMiddleware, (_req, res) => {
+  res.status(200).json({
+    message: 'This is a protected route. User is authenticated.',
+    // User info available at req.user (see AuthenticatedRequest type)
+  });
+});
+
+// TODO: Import and register route modules as they are created
+// import { usersRouter } from './users/index.js';
+// import { tenantsRouter } from './tenants/index.js';
+// import { camerasRouter } from './cameras/index.js';
+// import { eventsRouter } from './events/index.js';
+
+// TODO: Register protected routes with authMiddleware
+// apiRouter.use('/users', authMiddleware, usersRouter);
+// apiRouter.use('/tenants', authMiddleware, tenantsRouter);
+// apiRouter.use('/cameras', authMiddleware, camerasRouter);
+// apiRouter.use('/events', authMiddleware, eventsRouter);

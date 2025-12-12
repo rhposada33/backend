@@ -1,28 +1,22 @@
 /**
  * Authentication Module
- * Handles user authentication and authorization
+ * Handles user authentication, authorization, and JWT management
  *
- * TODO: Implement JWT token generation and validation
- * TODO: Implement password hashing and verification
- * TODO: Implement refresh token logic
- * TODO: Implement role-based access control (RBAC)
- * TODO: Implement tenant-based access control
- * TODO: Implement session management
- * TODO: Implement OAuth/OIDC integration (optional)
- * TODO: Implement multi-factor authentication (optional)
+ * Exports:
+ * - JWT service: signToken, verifyToken, extractTokenFromHeader
+ * - Password service: hashPassword, verifyPassword
+ * - Auth middleware: authMiddleware, requireTenant
+ * - Auth types: JWTPayload, AuthenticatedRequest
  */
 
-export const authModule = {
-  // TODO: Add authentication functions
-  // async login(email: string, password: string): Promise<tokens>
-  // async register(email: string, password: string): Promise<user>
-  // async refreshToken(refreshToken: string): Promise<accessToken>
-  // async validateToken(token: string): Promise<payload>
-  // async logout(token: string): Promise<void>
-};
+// JWT Token Service
+export { signToken, verifyToken, extractTokenFromHeader } from './jwt.js';
+export type { JWTPayload } from './jwt.js';
 
-// TODO: Create auth middleware
-// export function authMiddleware(req: Request, res: Response, next: NextFunction)
+// Password Service
+export { hashPassword, verifyPassword } from './password.js';
 
-// TODO: Create role-based middleware
-// export function requireRole(...roles: string[])
+// Middleware
+export { authMiddleware, requireTenant } from './middleware.js';
+export type { AuthenticatedRequest } from './middleware.js';
+
