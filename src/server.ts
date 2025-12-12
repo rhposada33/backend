@@ -12,10 +12,11 @@ import swaggerJsdoc from 'swagger-jsdoc';
 
 // Wrap in async IIFE to use top-level await
 (async () => {
-  // ============================================================================
-  // 1. LOAD ENVIRONMENT CONFIGURATION
-  // ============================================================================
-  dotenv.config();
+  try {
+    // ============================================================================
+    // 1. LOAD ENVIRONMENT CONFIGURATION
+    // ============================================================================
+    dotenv.config();
 
   const { config } = await import('./config/index.js');
   const { swaggerOptions } = await import('./config/swagger.js');
@@ -174,4 +175,8 @@ import swaggerJsdoc from 'swagger-jsdoc';
     console.log(`Multi-tenant: ${config.enableMultiTenant ? 'Enabled' : 'Disabled'}`);
     console.log('');
   });
+  } catch (error) {
+    console.error('❌ Fatal Error:', error);
+    process.exit(1);
+  }
 })();

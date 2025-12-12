@@ -2,7 +2,7 @@
   "watch": ["src"],
   "ext": "ts",
   "ignore": ["src/**/*.spec.ts"],
-  "exec": "node --loader ts-node/esm --no-warnings src/server.ts",
+  "exec": "npx tsx src/server.ts",
   "env": {
     "NODE_ENV": "development"
   }
