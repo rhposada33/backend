@@ -10,7 +10,7 @@ dotenv.config();
 import { config } from './config/index.js';
 
 // Import middleware
-import { errorHandler } from './middleware/errorHandler.js';
+import { errorHandler, NotFoundError } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { tenantResolver } from './middleware/tenantResolver.js';
 
@@ -52,12 +52,7 @@ app.get('/health', (_req, res) => {
 // API Routes (includes auth routes)
 app.use(`${config.apiPrefix}/${config.apiVersion}`, apiRouter);
 
-// Middleware: 404 handler
-app.use((_req, res) => {
-  res.status(404).json({ error: 'Not found' });
-});
-
-// Middleware: Global error handler
+// Middleware: Global error handler (MUST BE LAST)
 app.use(errorHandler);
 
 // Start server

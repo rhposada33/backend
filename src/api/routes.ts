@@ -7,6 +7,7 @@
 
 import { Router } from 'express';
 import { authMiddleware } from '../auth/index.js';
+import { NotFoundError } from '../middleware/errorHandler.js';
 import { authRouter } from '../modules/user/index.js';
 import { tenantRouter } from '../modules/tenant/index.js';
 import { cameraRouter } from '../modules/camera/index.js';
@@ -52,6 +53,12 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/tenants', tenantRouter);
 apiRouter.use('/cameras', cameraRouter);
 apiRouter.use('/events', eventRouter);
+
+// Catch-all 404 handler for undefined routes
+// Must be after all other route definitions
+apiRouter.use((_req, _res, next) => {
+  next(new NotFoundError('Endpoint not found'));
+});
 
 // TODO: Import and register route modules as they are created
 // import { usersRouter } from './users/index.js';
