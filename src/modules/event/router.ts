@@ -12,25 +12,168 @@ import { listEvents, getEvent, getEventsByCamera } from './controller.js';
 export const eventRouter = Router();
 
 /**
- * GET /events
- * Get all events for the authenticated user's tenant
- * Supports pagination: ?page=1&limit=50
- * Requires: Authentication
+ * @swagger
+ * /events:
+ *   get:
+ *     tags:
+ *       - Events
+ *     summary: List all events
+ *     description: Get all events for the authenticated user's tenant with pagination support
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number (starts at 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Items per page (1-100)
+ *     responses:
+ *       200:
+ *         description: List of events
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EventListResponse'
+ *       400:
+ *         description: Invalid pagination parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized - missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 eventRouter.get('/', authMiddleware, asyncHandler(listEvents));
 
 /**
- * GET /events/byCamera/:cameraId
- * Get events for a specific camera
- * Supports pagination: ?page=1&limit=50
- * Requires: Authentication (must be before /:id)
+ * @swagger
+ * /events/byCamera/{cameraId}:
+ *   get:
+ *     tags:
+ *       - Events
+ *     summary: Get events by camera
+ *     description: Retrieve all events for a specific camera with pagination support
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: cameraId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Camera ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number (starts at 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Items per page (1-100)
+ *     responses:
+ *       200:
+ *         description: List of events for the camera
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/EventListResponse'
+ *       400:
+ *         description: Invalid pagination parameters or camera ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized - missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Camera not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 eventRouter.get('/byCamera/:cameraId', authMiddleware, asyncHandler(getEventsByCamera));
 
 /**
- * GET /events/:id
- * Get a single event by ID
- * Requires: Authentication
+ * @swagger
+ * /events/{id}:
+ *   get:
+ *     tags:
+ *       - Events
+ *     summary: Get event by ID
+ *     description: Retrieve a single event by its unique identifier
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Event ID
+ *     responses:
+ *       200:
+ *         description: Event found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Event'
+ *       401:
+ *         description: Unauthorized - missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       404:
+ *         description: Event not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 eventRouter.get('/:id', authMiddleware, asyncHandler(getEvent));
 

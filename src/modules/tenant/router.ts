@@ -10,23 +10,137 @@ import { getTenant, listTenants, createTenant } from './controller.js';
 export const tenantRouter = Router();
 
 /**
- * GET /tenants/:id
- * Get a single tenant by ID
- * Public endpoint
+ * @swagger
+ * /tenants/{id}:
+ *   get:
+ *     tags:
+ *       - Tenants
+ *     summary: Get tenant by ID
+ *     description: Retrieve a single tenant by its unique identifier (public endpoint)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Tenant ID
+ *     responses:
+ *       200:
+ *         description: Tenant found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Tenant'
+ *       404:
+ *         description: Tenant not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotFoundError'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 tenantRouter.get('/:id', getTenant);
 
 /**
- * GET /tenants
- * Get all tenants with pagination
- * Public endpoint
- */
-tenantRouter.get('/', listTenants);
-
-/**
- * POST /tenants
- * Create a new tenant
- * Requires authentication + admin role
+ * @swagger
+ * /tenants:
+ *   get:
+ *     tags:
+ *       - Tenants
+ *     summary: List all tenants
+ *     description: Retrieve all tenants with pagination support (public endpoint)
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number (starts at 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Items per page (1-100)
+ *     responses:
+ *       200:
+ *         description: List of tenants
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TenantListResponse'
+ *       400:
+ *         description: Invalid pagination parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *   post:
+ *     tags:
+ *       - Tenants
+ *     summary: Create new tenant
+ *     description: Create a new tenant (admin only, requires authentication)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateTenantRequest'
+ *     responses:
+ *       201:
+ *         description: Tenant created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'Tenant created successfully'
+ *                 data:
+ *                   $ref: '#/components/schemas/Tenant'
+ *       400:
+ *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized - missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       403:
+ *         description: Forbidden - user is not an administrator
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ForbiddenError'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 tenantRouter.post('/', authMiddleware, createTenant);
 

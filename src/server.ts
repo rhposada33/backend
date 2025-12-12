@@ -2,12 +2,15 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsdoc from 'swagger-jsdoc';
 
 // Load environment variables
 dotenv.config();
 
 // Import configuration
 import { config } from './config/index.js';
+import { swaggerOptions } from './config/swagger.js';
 
 // Import middleware
 import { errorHandler, NotFoundError } from './middleware/errorHandler.js';
@@ -43,6 +46,22 @@ app.use(tenantResolver);
 
 // TODO: Initialize database connections
 // app.use(await initializeDatabase());
+
+// Serve Swagger spec as JSON (before Swagger UI middleware)
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+app.get('/docs/swagger.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// Swagger Documentation UI
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  swaggerOptions: {
+    url: '/docs/swagger.json',
+  },
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Sateliteyes Guard API Documentation',
+}));
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
