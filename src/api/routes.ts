@@ -7,6 +7,7 @@
 
 import { Router } from 'express';
 import { authMiddleware } from '../auth/index.js';
+import { authRouter } from '../modules/user/index.js';
 import { tenantRouter } from '../modules/tenant/index.js';
 import { cameraRouter } from '../modules/camera/index.js';
 
@@ -46,6 +47,7 @@ apiRouter.get('/me', authMiddleware, (_req, res) => {
 });
 
 // Module routes
+apiRouter.use('/auth', authRouter);
 apiRouter.use('/tenants', tenantRouter);
 apiRouter.use('/cameras', cameraRouter);
 

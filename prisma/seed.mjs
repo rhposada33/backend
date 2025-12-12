@@ -1,13 +1,15 @@
+#!/usr/bin/env node
 /**
  * Prisma Database Seed Script
  * Run with: npm run db:seed
- *
- * TODO: Add seed data for development/testing
  */
 
-import { prisma } from '../src/db/client.js';
+import { PrismaClient } from '@prisma/client';
+import bcryptjs from 'bcryptjs';
 
-async function main(): Promise<void> {
+const prisma = new PrismaClient();
+
+async function main() {
   console.info('🌱 Seeding database...');
 
   // Create default tenant
@@ -22,9 +24,8 @@ async function main(): Promise<void> {
   console.log('✅ Tenant ready:', tenant.id, tenant.name);
 
   // Create test user for the default tenant
-  const { hashPassword, signToken } = await import('../src/auth/index.js');
-  const hashedPassword = await hashPassword('Password123!');
-  
+  const hashedPassword = await bcryptjs.hash('Password123!', 10);
+
   const user = await prisma.user.upsert({
     where: { email: 'test@example.com' },
     update: {},
