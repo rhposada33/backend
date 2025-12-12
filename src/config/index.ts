@@ -19,10 +19,13 @@ interface Config {
 }
 
 function getConfig(): Config {
+  // Parse CORS origins - support comma-separated list or single origin
+  const corsOriginEnv = process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:8080';
+  
   return {
     port: parseInt(process.env.PORT || '3000', 10),
     nodeEnv: process.env.NODE_ENV || 'development',
-    corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    corsOrigin: corsOriginEnv,
     apiPrefix: process.env.API_PREFIX || '/api',
     apiVersion: process.env.API_VERSION || 'v1',
     jwtSecret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',

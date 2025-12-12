@@ -9,7 +9,8 @@ import { hashPassword, verifyPassword, signToken } from '../../auth/index.js';
 export interface RegisterInput {
   email: string;
   password: string;
-  tenantId: string;
+  tenantId?: string;
+  tenantName?: string;
 }
 
 export interface LoginInput {
@@ -40,9 +41,30 @@ export async function registerUser(input: RegisterInput): Promise<AuthResponse> 
     throw new Error('User already exists');
   }
 
+  let tenantId = input.tenantId;
+
+  // If tenantName is provided, create or find tenant
+  if (input.tenantName && !tenantId) {
+    let tenant = await prisma.tenant.findFirst({
+      where: { name: input.tenantName },
+    });
+
+    if (!tenant) {
+      tenant = await prisma.tenant.create({
+        data: { name: input.tenantName },
+      });
+    }
+
+    tenantId = tenant.id;
+  }
+
   // Check if tenant exists
+  if (!tenantId) {
+    throw new Error('Tenant ID or name is required');
+  }
+
   const tenant = await prisma.tenant.findUnique({
-    where: { id: input.tenantId },
+    where: { id: tenantId },
   });
 
   if (!tenant) {
@@ -57,7 +79,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthResponse> 
     data: {
       email: input.email,
       password: hashedPassword,
-      tenantId: input.tenantId,
+      tenantId: tenantId,
     },
   });
 

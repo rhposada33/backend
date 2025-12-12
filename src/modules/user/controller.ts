@@ -9,17 +9,25 @@ import { registerUser, loginUser, RegisterInput, LoginInput } from './service.js
 /**
  * Register endpoint
  * POST /auth/register
- * Body: { email, password, tenantId }
+ * Body: { email, password, tenantId OR tenantName }
  */
 export async function register(req: Request, res: Response): Promise<void> {
   try {
-    const { email, password, tenantId } = req.body as RegisterInput;
+    const { email, password, tenantId, tenantName } = req.body;
 
     // Validate required fields
-    if (!email || !password || !tenantId) {
+    if (!email || !password) {
       res.status(400).json({
         error: 'Bad Request',
-        message: 'Email, password, and tenantId are required',
+        message: 'Email and password are required',
+      });
+      return;
+    }
+
+    if (!tenantId && !tenantName) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Either tenantId or tenantName must be provided',
       });
       return;
     }
@@ -43,7 +51,12 @@ export async function register(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const result = await registerUser({ email, password, tenantId });
+    const result = await registerUser({ 
+      email, 
+      password, 
+      tenantId: tenantId || undefined,
+      tenantName: tenantName || undefined
+    });
 
     res.status(201).json({
       message: 'User registered successfully',

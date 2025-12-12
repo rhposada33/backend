@@ -71,10 +71,24 @@ import swaggerJsdoc from 'swagger-jsdoc';
   // Security headers
   app.use(helmet());
 
-  // CORS configuration
+  // CORS configuration - support multiple origins
+  const corsOrigins = config.corsOrigin
+    .split(',')
+    .map(origin => origin.trim());
+  
   app.use(
     cors({
-      origin: config.corsOrigin,
+      origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // Check if origin is in our allowed list
+        if (corsOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       credentials: true,
     })
   );
