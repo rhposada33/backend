@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../auth/index.js';
 import { tenantRouter } from '../modules/tenant/index.js';
+import { cameraRouter } from '../modules/camera/index.js';
 
 export const apiRouter = Router();
 
@@ -46,6 +47,7 @@ apiRouter.get('/me', authMiddleware, (_req, res) => {
 
 // Module routes
 apiRouter.use('/tenants', tenantRouter);
+apiRouter.use('/cameras', cameraRouter);
 
 // TODO: Import and register route modules as they are created
 // import { usersRouter } from './users/index.js';
