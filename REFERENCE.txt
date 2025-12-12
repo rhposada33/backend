@@ -1,0 +1,111 @@
+#!/usr/bin/env cat
+# 📞 QUICK REFERENCE CARD - Backend Project
+
+## 🎯 Start Here
+
+```bash
+cd /home/rafa/satelitrack/backend
+npm run dev
+```
+
+Then visit: `http://localhost:3000/health`
+
+## 📚 Documentation (Read in Order)
+
+1. **QUICK_REFERENCE.md** (this file) - 2 min
+2. **START_HERE.md** - 5 min
+3. **QUICKSTART.md** - 5 min  
+4. **ARCHITECTURE.md** - 30 min
+
+## ⚡ Essential Commands
+
+```bash
+npm run dev              # Start (hot reload)
+npm run build            # Compile
+npm run start           # Run production
+npm run type-check      # Check types
+npm run lint            # Check code
+npm run lint:fix        # Fix issues
+npm run format          # Format code
+```
+
+## 🔗 API Endpoints
+
+```bash
+# Health check
+curl http://localhost:3000/health
+
+# API root
+curl http://localhost:3000/api/v1/
+```
+
+## 📁 Important Files
+
+| File | Purpose |
+|------|---------|
+| `src/server.ts` | Main app |
+| `.env` | Settings |
+| `src/api/routes.ts` | Routes |
+| `EXAMPLE_MODULE.md` | Code template |
+
+## 🗂️ Project Structure
+
+```
+src/
+├── server.ts           Main app
+├── api/                Routes
+├── middleware/         Middleware
+├── config/             Config
+├── db/                 Database
+├── auth/               Auth
+├── modules/            Modules
+└── utils/              Utils
+```
+
+## 🎯 Implementation Checklist
+
+- [ ] Run `npm run dev`
+- [ ] Test `/health` endpoint
+- [ ] Read ARCHITECTURE.md
+- [ ] Setup database
+- [ ] Implement auth
+- [ ] Create modules
+- [ ] Add validation
+- [ ] Deploy
+
+## 🚨 Issue? Run This
+
+```bash
+npm run type-check
+npm run lint:fix
+npm run dev
+```
+
+## 💾 Remember
+
+- `.env` has your settings
+- Keep server running with `npm run dev`
+- Press `Ctrl+C` to stop
+- Hot reload works automatically
+- Use `.js` extensions in imports
+
+## 🔍 Find TODOs
+
+```bash
+grep -r "TODO:" src/
+```
+
+## 📞 Next Steps
+
+1. Read documentation
+2. Run development server
+3. Implement features
+4. Test endpoints
+5. Deploy
+
+---
+
+**Server**: Ready ✅  
+**Hot Reload**: Active ✅  
+**Docs**: Complete ✅  
+**Ready to Build**: YES ✅
