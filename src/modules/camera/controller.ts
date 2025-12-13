@@ -27,6 +27,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../../auth/middleware.js';
 import * as cameraService from './service.js';
+import * as proxyService from './proxy.js';
 
 /**
  * POST /cameras
@@ -360,6 +361,88 @@ export async function getCameraStreams(
       error: 'Internal Server Error',
       message: 'Failed to retrieve camera streams',
     });
+  }
+}
+
+/**
+ * GET /streams/:cameraKey
+ * Proxy a livestream from Frigate to the client
+ *
+ * Behavior:
+ * 1. Authenticate user via JWT
+ * 2. Extract tenantId from token
+ * 3. Verify camera key belongs to tenant (security)
+ * 4. Proxy HLS stream from Frigate
+ * 5. Preserve content-type headers
+ * 6. Handle errors gracefully (camera offline, etc)
+ *
+ * SECURITY:
+ * - Frontend never has direct Frigate URL
+ * - Camera ownership verified at database level
+ * - Only tenant's cameras accessible
+ * - Frigate URL completely hidden from browser
+ *
+ * Query Parameters (optional):
+ * - ?format=hls|mjpeg|webrtc|snapshot  (default: hls)
+ */
+export async function proxyStream(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    // Verify authenticated
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const { cameraKey } = req.params;
+    const format = (req.query.format as string) || 'hls';
+
+    // Validate camera key
+    if (!cameraKey || typeof cameraKey !== 'string' || cameraKey.trim().length === 0) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Camera key is required',
+      });
+      return;
+    }
+
+    // Validate format
+    const validFormats = ['hls', 'mjpeg', 'webrtc', 'snapshot'];
+    if (!validFormats.includes(format)) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: `Invalid format. Must be one of: ${validFormats.join(', ')}`,
+      });
+      return;
+    }
+
+    // Proxy the stream through service
+    // Service handles:
+    // - Camera ownership verification (tenant scoping)
+    // - Frigate request
+    // - Error handling
+    // - Header preservation
+    await proxyService.proxyFrigateStream(
+      req.user.tenantId,
+      cameraKey.trim(),
+      format as any,
+      res
+    );
+  } catch (error) {
+    console.error('Proxy stream error:', error);
+
+    // Only send error response if headers not already sent
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: 'Failed to proxy stream',
+      });
+    }
   }
 }
 

@@ -11,6 +11,7 @@ import { NotFoundError } from '../middleware/errorHandler.js';
 import { authRouter } from '../modules/user/index.js';
 import { tenantRouter } from '../modules/tenant/index.js';
 import { cameraRouter } from '../modules/camera/index.js';
+import { streamsRouter } from '../modules/streams/index.js';
 import { eventRouter } from '../modules/event/index.js';
 
 export const apiRouter = Router();
@@ -52,6 +53,7 @@ apiRouter.get('/me', authMiddleware, (_req, res) => {
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/tenants', tenantRouter);
 apiRouter.use('/cameras', cameraRouter);
+apiRouter.use('/streams', streamsRouter);
 apiRouter.use('/events', eventRouter);
 
 // Catch-all 404 handler for undefined routes

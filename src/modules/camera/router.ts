@@ -13,6 +13,7 @@ import {
   updateCamera,
   deleteCamera,
   getCameraStreams,
+  proxyStream,
 } from './controller.js';
 
 export const cameraRouter = Router();
