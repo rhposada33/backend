@@ -2,6 +2,26 @@
  * Camera Controller
  * Request handlers for camera management endpoints
  * All operations are scoped to the authenticated user's tenantId
+ *
+ * LIVESTREAM ARCHITECTURE:
+ * ========================
+ *
+ * Frontend Access:
+ * - Frontend NEVER accesses Frigate directly
+ * - All livestream requests go through this controller
+ * - Backend generates/proxies/forwards livestream URLs
+ *
+ * Tenant Scoping Requirements:
+ * - CRITICAL: Always verify camera belongs to user's tenant
+ * - Check: camera.tenantId === req.user.tenantId
+ * - Failure to validate = Security vulnerability
+ *
+ * Camera Key Validation:
+ * - The camera.key must EXACTLY match Frigate camera name
+ * - Example: camera.key = "garage_camera" → Frigate must have camera named "garage_camera"
+ * - This mapping is critical for livestream access
+ *
+ * See CAMERA_LIVESTREAM_DESIGN.md for complete documentation
  */
 
 import { Response } from 'express';
@@ -299,3 +319,33 @@ export async function deleteCamera(
     });
   }
 }
+
+/**
+ * ============================================================================
+ * LIVESTREAM ENDPOINTS - TODO: Implement before enabling streaming features
+ * ============================================================================
+ *
+ * These endpoints will handle camera livestream access.
+ * CRITICAL Requirements:
+ * 1. Tenant Scoping: Verify camera.tenantId === req.user.tenantId
+ * 2. Camera Key: Verify camera.key matches Frigate camera name
+ * 3. Frontend Access: Frontend must NOT access Frigate directly
+ * 4. URL Generation: Backend generates all livestream URLs
+ * 5. Error Handling: Handle Frigate unavailable, camera offline, etc.
+ *
+ * Planned Endpoints:
+ * - GET /cameras/:id/stream              → Get livestream URL + status
+ * - GET /cameras/:id/stream/webrtc       → WebRTC stream (low latency)
+ * - GET /cameras/:id/stream/mjpeg        → MJPEG stream (fallback)
+ * - GET /cameras/:id/stream/hls          → HLS stream (reliable)
+ * - GET /cameras/:id/stream/status       → Stream status only
+ *
+ * See CAMERA_LIVESTREAM_DESIGN.md for full API design
+ */
+
+// TODO: getCameraStream(req: AuthenticatedRequest, res: Response): Promise<void>
+// TODO: getCameraWebRTCStream(req: AuthenticatedRequest, res: Response): Promise<void>
+// TODO: getCameraMJPEGStream(req: AuthenticatedRequest, res: Response): Promise<void>
+// TODO: getCameraHLSStream(req: AuthenticatedRequest, res: Response): Promise<void>
+// TODO: getCameraStreamStatus(req: AuthenticatedRequest, res: Response): Promise<void>
+

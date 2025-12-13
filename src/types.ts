@@ -96,6 +96,24 @@ export interface BaseEntity {
 }
 
 /**
+ * Camera Livestream Type
+ *
+ * IMPORTANT ARCHITECTURE NOTES:
+ * - Frontend never accesses Frigate directly
+ * - Backend generates/proxies all livestream URLs
+ * - Each livestream is scoped to a tenant and camera
+ * - The camera "key" must match the Frigate camera name
+ *
+ * See CAMERA_LIVESTREAM_DESIGN.md for full documentation
+ */
+export interface CameraStream {
+  cameraId: string;
+  cameraName: string;
+  streamUrl: string;
+  status: 'live' | 'offline' | 'recording';
+}
+
+/**
  * TODO: Add more types as needed
  * - Authentication types (JwtPayload, TokenPair, etc.)
  * - Subscription types

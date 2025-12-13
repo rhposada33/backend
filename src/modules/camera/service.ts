@@ -2,13 +2,34 @@
  * Camera Service
  * Business logic for camera management operations
  * All operations are scoped to the authenticated user's tenantId
+ *
+ * LIVESTREAM ARCHITECTURE:
+ * ========================
+ *
+ * Frontend Access Pattern:
+ * - Frontend NEVER accesses Frigate directly (not exposed to internet)
+ * - Frontend makes all livestream requests to the Backend API
+ * - Backend is responsible for generating, proxying, or forwarding livestream URLs
+ *
+ * Camera Key ↔ Frigate Name Mapping:
+ * - The camera "key" field MUST EXACTLY MATCH the Frigate camera name
+ * - This is the critical bridge between the backend database and Frigate
+ * - Example: If camera.key = "garage_camera", Frigate must have a camera named "garage_camera"
+ *
+ * Tenant Scoping:
+ * - Each livestream request must be validated against the user's tenantId
+ * - A user can ONLY access livestreams for cameras in their tenant
+ * - The backend MUST verify: camera.tenantId === authenticatedUser.tenantId
+ * - Failure to validate = Security breach (data leak across tenants)
+ *
+ * See CAMERA_LIVESTREAM_DESIGN.md for complete design documentation
  */
 
 import { prisma } from '../../db/client.js';
 
 export interface CreateCameraInput {
-  key: string; // Frigate camera name - must be unique per tenant
-  label?: string;
+  key: string; // Frigate camera name - must be unique per tenant and match Frigate config
+  label?: string; // Human-readable display name for UI
 }
 
 export interface UpdateCameraInput {
@@ -272,3 +293,25 @@ export async function getCameraByKey(
     createdAt: camera.createdAt,
   };
 }
+
+/**
+ * ============================================================================
+ * LIVESTREAM FUNCTIONS - TODO: Implement before enabling livestream endpoints
+ * ============================================================================
+ *
+ * These functions will handle camera livestream access and proxying.
+ * Key Requirements:
+ * 1. Always validate tenant scope (tenantId must match)
+ * 2. Verify camera key matches Frigate camera name
+ * 3. Frontend never accesses Frigate directly
+ * 4. Backend generates/proxies all livestream URLs
+ * 5. Implement tenant-scoped and camera-scoped access control
+ *
+ * See CAMERA_LIVESTREAM_DESIGN.md for full architecture documentation
+ */
+
+// TODO: getCameraStreamUrl(tenantId: string, cameraId: string, protocol?: 'webrtc' | 'mjpeg' | 'hls'): Promise<CameraStream>
+// TODO: getCameraStreamStatus(tenantId: string, cameraId: string): Promise<'live' | 'offline' | 'recording'>
+// TODO: validateCameraKeyWithFrigate(key: string): Promise<boolean>
+// TODO: proxyCameraStream(tenantId: string, cameraId: string, response: Response): Promise<void>
+
