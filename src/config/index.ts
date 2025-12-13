@@ -14,6 +14,7 @@ interface Config {
   jwtExpiry: string;
   enableMultiTenant: boolean;
   logLevel: string;
+  frigatBaseUrl: string;
   // TODO: Add database configuration
   // TODO: Add additional config properties as needed
 }
@@ -21,6 +22,9 @@ interface Config {
 function getConfig(): Config {
   // Parse CORS origins - support comma-separated list or single origin
   const corsOriginEnv = process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:8080';
+  
+  // Frigate base URL - defaults to local Docker Frigate instance
+  const frigatBaseUrl = process.env.FRIGATE_BASE_URL || 'http://frigate:5000';
   
   return {
     port: parseInt(process.env.PORT || '3000', 10),
@@ -34,6 +38,7 @@ function getConfig(): Config {
     jwtExpiry: process.env.JWT_EXPIRY || '7d',
     enableMultiTenant: process.env.ENABLE_MULTI_TENANT === 'true',
     logLevel: process.env.LOG_LEVEL || 'info',
+    frigatBaseUrl,
     // TODO: Initialize database configuration from environment
     // TODO: Add additional configuration properties
   };

@@ -26,6 +26,8 @@
  */
 
 import { prisma } from '../../db/client.js';
+import { CameraStream } from '../../types.js';
+import { config } from '../../config/index.js';
 
 export interface CreateCameraInput {
   key: string; // Frigate camera name - must be unique per tenant and match Frigate config
@@ -280,7 +282,6 @@ export async function getCameraByKey(
       },
     },
   });
-
   if (!camera) {
     return null;
   }
@@ -291,6 +292,52 @@ export async function getCameraByKey(
     key: camera.key,
     label: camera.label || undefined,
     createdAt: camera.createdAt,
+  };
+}
+
+/**
+ * Get all cameras with livestream information for a tenant
+ * Constructs stream URLs using Frigate base URL
+ * Does NOT expose raw Frigate credentials
+ *
+ * SECURITY NOTE: Tenant scoping is enforced at database query level
+ */
+export async function getCameraStreams(tenantId: string): Promise<CameraStream[]> {
+  const cameras = await prisma.camera.findMany({
+    where: {
+      tenantId, // Enforce tenant scoping
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  });
+
+  // Transform cameras to CameraStream format with constructed URLs
+  return cameras.map((camera) => buildCameraStream(camera));
+}
+
+/**
+ * Build a CameraStream object for a given camera
+ * Constructs the livestream URL using Frigate base URL and camera key
+ * The camera key must match the Frigate camera name
+ */
+function buildCameraStream(camera: {
+  id: string;
+  key: string;
+  label: string | null;
+}): CameraStream {
+  // Construct livestream URL
+  // Format: {FRIGATE_BASE_URL}/api/camera/{camera_key}/webrtc
+  // Additional protocols available: /mjpeg, /snapshot, /clip
+  const streamUrl = `${config.frigatBaseUrl}/api/camera/${encodeURIComponent(camera.key)}/webrtc`;
+
+  return {
+    cameraId: camera.id,
+    cameraName: camera.label || camera.key,
+    streamUrl,
+    // TODO: Implement actual status checking by querying Frigate
+    // For now, hardcoding to 'live' - will be replaced with real status
+    status: 'live',
   };
 }
 

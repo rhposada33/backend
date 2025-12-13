@@ -321,6 +321,49 @@ export async function deleteCamera(
 }
 
 /**
+ * GET /cameras/streams
+ * Get all cameras with livestream information for the authenticated user's tenant
+ *
+ * Returns an array of CameraStream objects with constructed livestream URLs
+ * Frontend uses these URLs to access camera streams
+ *
+ * SECURITY:
+ * - Enforces tenant scoping at both middleware and database levels
+ * - Does NOT expose raw Frigate credentials
+ * - Constructs URLs through backend to enable future access control
+ */
+export async function getCameraStreams(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    // Verify authenticated
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    // Fetch all cameras with livestream URLs for this tenant
+    const streams = await cameraService.getCameraStreams(req.user.tenantId);
+
+    res.status(200).json({
+      data: streams,
+      count: streams.length,
+    });
+  } catch (error) {
+    console.error('Get camera streams error:', error);
+
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to retrieve camera streams',
+    });
+  }
+}
+
+/**
  * ============================================================================
  * LIVESTREAM ENDPOINTS - TODO: Implement before enabling streaming features
  * ============================================================================

@@ -12,6 +12,7 @@ import {
   getCamera,
   updateCamera,
   deleteCamera,
+  getCameraStreams,
 } from './controller.js';
 
 export const cameraRouter = Router();
@@ -113,6 +114,65 @@ export const cameraRouter = Router();
  */
 cameraRouter.post('/', authMiddleware, createCamera);
 cameraRouter.get('/', authMiddleware, listCameras);
+
+/**
+ * @swagger
+ * /cameras/streams:
+ *   get:
+ *     tags:
+ *       - Cameras
+ *     summary: Get camera livestream information
+ *     description: Get all cameras with livestream URLs for the authenticated user's tenant. Returns an array of CameraStream objects with constructed livestream URLs that the frontend can use to display live video.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of cameras with livestream URLs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       cameraId:
+ *                         type: string
+ *                         description: Unique camera identifier
+ *                       cameraName:
+ *                         type: string
+ *                         description: Camera display name (label or key)
+ *                       streamUrl:
+ *                         type: string
+ *                         description: Backend-generated livestream URL to access the camera feed
+ *                       status:
+ *                         type: string
+ *                         enum: ['live', 'offline', 'recording']
+ *                         description: Current livestream status
+ *                     example:
+ *                       cameraId: "cam-abc123"
+ *                       cameraName: "Front Entrance"
+ *                       streamUrl: "http://localhost:3000/api/cameras/cam-abc123/stream/webrtc"
+ *                       status: "live"
+ *                 count:
+ *                   type: integer
+ *                   description: Total number of cameras returned
+ *       401:
+ *         description: Unauthorized - missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+cameraRouter.get('/streams', authMiddleware, getCameraStreams);
 
 /**
  * @swagger
