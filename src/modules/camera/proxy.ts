@@ -43,9 +43,9 @@ export async function verifyCameraOwnership(
 ): Promise<{ id: string; label: string | null } | null> {
   const camera = await prisma.camera.findUnique({
     where: {
-      tenantId_key: {
+      tenantId_frigateCameraKey: {
         tenantId,
-        key: cameraKey,
+        frigateCameraKey: cameraKey,
       },
     },
     select: {
@@ -101,8 +101,14 @@ export async function proxyFrigateStream(
     // Determine if HTTPS or HTTP based on config
     const protocol = config.frigatBaseUrl.startsWith('https') ? https : http;
 
+    // For HTTPS with self-signed certificates, disable SSL verification in development
+    const requestOptions: https.RequestOptions = {};
+    if (config.frigatBaseUrl.startsWith('https') && config.nodeEnv === 'development') {
+      requestOptions.rejectUnauthorized = false;
+    }
+
     // Make request to Frigate
-    const request = protocol.get(frigateUrl, (frigateResponse) => {
+    const request = protocol.get(frigateUrl, requestOptions, (frigateResponse) => {
       // Get content-type from Frigate response
       const contentType = frigateResponse.headers['content-type'];
       const customContentType = STREAM_CONTENT_TYPES[format];
@@ -173,7 +179,13 @@ export async function checkCameraStatus(
     const url = `${config.frigatBaseUrl}/api/camera/${encodeURIComponent(cameraKey)}/snapshot`;
     const protocol = config.frigatBaseUrl.startsWith('https') ? https : http;
 
-    const request = protocol.get(url, (response) => {
+    // For HTTPS with self-signed certificates, disable SSL verification in development
+    const requestOptions: https.RequestOptions = {};
+    if (config.frigatBaseUrl.startsWith('https') && config.nodeEnv === 'development') {
+      requestOptions.rejectUnauthorized = false;
+    }
+
+    const request = protocol.get(url, requestOptions, (response) => {
       if (response.statusCode === 200) {
         resolve('online');
       } else {

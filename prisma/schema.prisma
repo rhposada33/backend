@@ -37,16 +37,17 @@ model User {
 }
 
 model Camera {
-  id          String @id @default(cuid())
-  tenantId    String
-  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  key         String // Frigate camera name
-  label       String?
-  createdAt   DateTime @default(now())
+  id                 String @id @default(cuid())
+  tenantId           String
+  tenant             Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  frigateCameraKey   String // Frigate camera name/identifier
+  label              String?
+  isEnabled          Boolean @default(true)
+  createdAt          DateTime @default(now())
   
   events Event[]
 
-  @@unique([tenantId, key])
+  @@unique([tenantId, frigateCameraKey])
   @@map("cameras")
 }
 

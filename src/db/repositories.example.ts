@@ -75,7 +75,7 @@ export class CameraRepository {
   /**
    * Create a camera for a tenant
    */
-  async create(tenantId: string, data: { key: string; label?: string }): Promise<any> {
+  async create(tenantId: string, data: { frigateCameraKey: string; label?: string }): Promise<any> {
     return prisma.camera.create({
       data: {
         ...data,
@@ -105,14 +105,14 @@ export class CameraRepository {
   }
 
   /**
-   * Find camera by key (name) and tenant
+   * Find camera by frigateCameraKey (name) and tenant
    */
-  async findByKey(tenantId: string, key: string): Promise<any> {
+  async findByKey(tenantId: string, frigateCameraKey: string): Promise<any> {
     return prisma.camera.findUnique({
       where: {
-        tenantId_key: {
+        tenantId_frigateCameraKey: {
           tenantId,
-          key,
+          frigateCameraKey,
         },
       },
     });

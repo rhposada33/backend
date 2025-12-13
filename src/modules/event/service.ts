@@ -20,7 +20,7 @@ export interface EventWithCamera {
   createdAt: Date;
   camera: {
     id: string;
-    key: string;
+    frigateCameraKey: string;
     label: string | null;
   };
 }
@@ -53,7 +53,7 @@ export async function getEventsByTenant(
         camera: {
           select: {
             id: true,
-            key: true,
+            frigateCameraKey: true,
             label: true,
           },
         },
@@ -87,7 +87,7 @@ export async function getEventById(
       camera: {
         select: {
           id: true,
-          key: true,
+          frigateCameraKey: true,
           label: true,
         },
       },
@@ -134,7 +134,7 @@ export async function getEventsByCamera(
         camera: {
           select: {
             id: true,
-            key: true,
+            frigateCameraKey: true,
             label: true,
           },
         },

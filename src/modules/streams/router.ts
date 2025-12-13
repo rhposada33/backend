@@ -42,7 +42,7 @@ export const streamsRouter = Router();
  *         required: true
  *         schema:
  *           type: string
- *         description: Frigate camera name (must match camera.key in database)
+ *         description: Frigate camera name (must match camera.frigateCameraKey in database)
  *       - in: query
  *         name: format
  *         schema:

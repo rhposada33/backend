@@ -57,7 +57,6 @@ export async function createCamera(
       });
       return;
     }
-
     // Validate optional label
     if (label !== undefined && typeof label !== 'string') {
       res.status(400).json({
@@ -68,7 +67,7 @@ export async function createCamera(
     }
 
     const camera = await cameraService.createCamera(req.user.tenantId, {
-      key,
+      frigateCameraKey: key,
       label,
     });
 
@@ -245,7 +244,7 @@ export async function updateCamera(
     }
 
     const camera = await cameraService.updateCamera(req.user.tenantId, id, {
-      key,
+      frigateCameraKey: key,
       label,
     });
 

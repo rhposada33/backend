@@ -160,7 +160,7 @@ exampleRouter.get('/cameras', authMiddleware, async (req: AuthenticatedRequest, 
       where: { tenantId: req.user.tenantId },
       select: {
         id: true,
-        key: true,
+        frigateCameraKey: true,
         label: true,
         createdAt: true,
       },
@@ -225,7 +225,7 @@ exampleRouter.get('/cameras/:cameraId/events', authMiddleware, async (req: Authe
     res.json({
       camera: {
         id: camera.id,
-        key: camera.key,
+        frigateCameraKey: camera.frigateCameraKey,
         label: camera.label,
       },
       events,

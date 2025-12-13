@@ -12,9 +12,9 @@
  * - Backend is responsible for generating, proxying, or forwarding livestream URLs
  *
  * Camera Key ↔ Frigate Name Mapping:
- * - The camera "key" field MUST EXACTLY MATCH the Frigate camera name
+ * - The camera "frigateCameraKey" field MUST EXACTLY MATCH the Frigate camera name
  * - This is the critical bridge between the backend database and Frigate
- * - Example: If camera.key = "garage_camera", Frigate must have a camera named "garage_camera"
+ * - Example: If frigateCameraKey = "garage_camera", Frigate must have a camera named "garage_camera"
  *
  * Tenant Scoping:
  * - Each livestream request must be validated against the user's tenantId
@@ -30,65 +30,68 @@ import { CameraStream } from '../../types.js';
 import { config } from '../../config/index.js';
 
 export interface CreateCameraInput {
-  key: string; // Frigate camera name - must be unique per tenant and match Frigate config
+  frigateCameraKey: string; // Frigate camera name - must be unique per tenant and match Frigate config
   label?: string; // Human-readable display name for UI
 }
 
 export interface UpdateCameraInput {
-  key?: string;
+  frigateCameraKey?: string;
   label?: string;
 }
 
 export interface CameraResponse {
   id: string;
   tenantId: string;
-  key: string;
+  frigateCameraKey: string;
   label?: string | null;
+  isEnabled: boolean;
   createdAt: Date;
 }
 
 /**
  * Create a new camera for a tenant
- * The key must be unique within the tenant
+ * The frigateCameraKey must be unique within the tenant
  */
 export async function createCamera(
   tenantId: string,
   input: CreateCameraInput
 ): Promise<CameraResponse> {
   // Validate input
-  if (!input.key || input.key.trim().length === 0) {
-    throw new Error('Camera key is required');
+  if (!input.frigateCameraKey || input.frigateCameraKey.trim().length === 0) {
+    throw new Error('Camera frigateCameraKey is required');
   }
 
-  const trimmedKey = input.key.trim();
+  const trimmedKey = input.frigateCameraKey.trim();
 
   // Check if camera with this key already exists in the tenant
   const existingCamera = await prisma.camera.findUnique({
     where: {
-      tenantId_key: {
+      tenantId_frigateCameraKey: {
         tenantId,
-        key: trimmedKey,
+        frigateCameraKey: trimmedKey,
       },
     },
   });
 
   if (existingCamera) {
-    throw new Error(`Camera with key "${trimmedKey}" already exists in this tenant`);
+    throw new Error(`Camera with frigateCameraKey "${trimmedKey}" already exists in this tenant`);
   }
 
   const camera = await prisma.camera.create({
     data: {
       tenantId,
-      key: trimmedKey,
+      frigateCameraKey: trimmedKey,
       label: input.label?.trim() || null,
+      isEnabled: true,
     },
   });
 
   return {
     id: camera.id,
     tenantId: camera.tenantId,
-    key: camera.key,
+    frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    isEnabled: camera.isEnabled,
     createdAt: camera.createdAt,
   };
 }
@@ -114,8 +117,9 @@ export async function getCameraById(
   return {
     id: camera.id,
     tenantId: camera.tenantId,
-    key: camera.key,
+    frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    isEnabled: camera.isEnabled,
     createdAt: camera.createdAt,
   };
 }
@@ -145,8 +149,9 @@ export async function getCamerasByTenant(
     cameraResponses.push({
       id: camera.id,
       tenantId: camera.tenantId,
-      key: camera.key,
+      frigateCameraKey: camera.frigateCameraKey,
       label: camera.label || undefined,
+      isEnabled: camera.isEnabled,
       createdAt: camera.createdAt,
     });
   }
@@ -159,7 +164,7 @@ export async function getCamerasByTenant(
 
 /**
  * Update a camera (must belong to tenant)
- * Only key and label can be updated
+ * Only frigateCameraKey, label, and isEnabled can be updated
  */
 export async function updateCamera(
   tenantId: string,
@@ -178,28 +183,28 @@ export async function updateCamera(
     throw new Error('Camera not found');
   }
 
-  // If updating key, check uniqueness within tenant
-  if (input.key && input.key !== camera.key) {
-    const trimmedKey = input.key.trim();
+  // If updating frigateCameraKey, check uniqueness within tenant
+  if (input.frigateCameraKey && input.frigateCameraKey !== camera.frigateCameraKey) {
+    const trimmedKey = input.frigateCameraKey.trim();
 
     const existingCamera = await prisma.camera.findUnique({
       where: {
-        tenantId_key: {
+        tenantId_frigateCameraKey: {
           tenantId,
-          key: trimmedKey,
+          frigateCameraKey: trimmedKey,
         },
       },
     });
 
     if (existingCamera) {
-      throw new Error(`Camera with key "${trimmedKey}" already exists in this tenant`);
+      throw new Error(`Camera with frigateCameraKey "${trimmedKey}" already exists in this tenant`);
     }
 
     // Update with new key
     const updated = await prisma.camera.update({
       where: { id: cameraId },
       data: {
-        key: trimmedKey,
+        frigateCameraKey: trimmedKey,
         label: input.label !== undefined ? input.label?.trim() || null : camera.label,
       },
     });
@@ -207,26 +212,31 @@ export async function updateCamera(
     return {
       id: updated.id,
       tenantId: updated.tenantId,
-      key: updated.key,
+      frigateCameraKey: updated.frigateCameraKey,
       label: updated.label || undefined,
+      isEnabled: updated.isEnabled,
       createdAt: updated.createdAt,
     };
   }
 
-  // Update only label
+  // Update only label and/or isEnabled
+  const dataToUpdate: any = {};
   if (input.label !== undefined) {
+    dataToUpdate.label = input.label.trim() || null;
+  }
+
+  if (Object.keys(dataToUpdate).length > 0) {
     const updated = await prisma.camera.update({
       where: { id: cameraId },
-      data: {
-        label: input.label.trim() || null,
-      },
+      data: dataToUpdate,
     });
 
     return {
       id: updated.id,
       tenantId: updated.tenantId,
-      key: updated.key,
+      frigateCameraKey: updated.frigateCameraKey,
       label: updated.label || undefined,
+      isEnabled: updated.isEnabled,
       createdAt: updated.createdAt,
     };
   }
@@ -235,8 +245,9 @@ export async function updateCamera(
   return {
     id: camera.id,
     tenantId: camera.tenantId,
-    key: camera.key,
+    frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    isEnabled: camera.isEnabled,
     createdAt: camera.createdAt,
   };
 }
@@ -267,18 +278,18 @@ export async function deleteCamera(
 }
 
 /**
- * Get camera by key (Frigate camera name) for a tenant
+ * Get camera by frigateCameraKey (Frigate camera name) for a tenant
  * Useful for matching incoming Frigate events
  */
 export async function getCameraByKey(
   tenantId: string,
-  key: string
+  frigateCameraKey: string
 ): Promise<CameraResponse | null> {
   const camera = await prisma.camera.findUnique({
     where: {
-      tenantId_key: {
+      tenantId_frigateCameraKey: {
         tenantId,
-        key: key.trim(),
+        frigateCameraKey: frigateCameraKey.trim(),
       },
     },
   });
@@ -289,8 +300,9 @@ export async function getCameraByKey(
   return {
     id: camera.id,
     tenantId: camera.tenantId,
-    key: camera.key,
+    frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    isEnabled: camera.isEnabled,
     createdAt: camera.createdAt,
   };
 }
@@ -318,22 +330,22 @@ export async function getCameraStreams(tenantId: string): Promise<CameraStream[]
 
 /**
  * Build a CameraStream object for a given camera
- * Constructs the livestream URL using Frigate base URL and camera key
- * The camera key must match the Frigate camera name
+ * Constructs the livestream URL using Frigate base URL and frigateCameraKey
+ * The frigateCameraKey must match the Frigate camera name
  */
 function buildCameraStream(camera: {
   id: string;
-  key: string;
+  frigateCameraKey: string;
   label: string | null;
 }): CameraStream {
   // Construct livestream URL
-  // Format: {FRIGATE_BASE_URL}/api/camera/{camera_key}/webrtc
+  // Format: {FRIGATE_BASE_URL}/api/camera/{frigateCameraKey}/webrtc
   // Additional protocols available: /mjpeg, /snapshot, /clip
-  const streamUrl = `${config.frigatBaseUrl}/api/camera/${encodeURIComponent(camera.key)}/webrtc`;
+  const streamUrl = `${config.frigatBaseUrl}/api/camera/${encodeURIComponent(camera.frigateCameraKey)}/webrtc`;
 
   return {
     cameraId: camera.id,
-    cameraName: camera.label || camera.key,
+    cameraName: camera.label || camera.frigateCameraKey,
     streamUrl,
     // TODO: Implement actual status checking by querying Frigate
     // For now, hardcoding to 'live' - will be replaced with real status
