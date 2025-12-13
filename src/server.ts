@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
+import expressWs from 'express-ws';
 
 /**
  * Initialize Express Server
@@ -58,11 +59,14 @@ import swaggerJsdoc from 'swagger-jsdoc';
   console.log('🛣️  Routes imported');
 
   // ============================================================================
-  // 5. CREATE EXPRESS APPLICATION
+  // 5. CREATE EXPRESS APPLICATION WITH WEBSOCKET SUPPORT
   // ============================================================================
   const app = express();
 
-  console.log('🚀 Express application created');
+  // Add WebSocket support to Express
+  const { app: wsApp } = expressWs(app);
+
+  console.log('🚀 Express application created with WebSocket support');
 
   // ============================================================================
   // 6. MIDDLEWARE STACK (in order)
@@ -148,6 +152,16 @@ import swaggerJsdoc from 'swagger-jsdoc';
   console.log('❤️  Health check endpoint ready');
 
   // ============================================================================
+  // 8.5. WEBSOCKET HANDLER
+  // ============================================================================
+  const { handleEventWebSocket } = await import('./modules/event/websocket.js');
+
+  // WebSocket endpoint for real-time events
+  (wsApp as any).ws(`${config.apiPrefix}/${config.apiVersion}/events`, handleEventWebSocket);
+
+  console.log(`🔌 WebSocket endpoint ready at ws://localhost:${config.port}${config.apiPrefix}/${config.apiVersion}/events`);
+
+  // ============================================================================
   // 9. MOUNT API ROUTERS
   // ============================================================================
 
@@ -158,7 +172,7 @@ import swaggerJsdoc from 'swagger-jsdoc';
   console.log('   - /auth (register, login)');
   console.log('   - /tenants (GET, POST, GET/:id)');
   console.log('   - /cameras (GET, POST, GET/:id, PUT, DELETE)');
-  console.log('   - /events (GET, POST, GET/:id, GET/byCamera/:cameraId)');
+  console.log('   - /events (GET, POST, GET/:id, GET/byCamera/:cameraId, WebSocket)');
 
   // ============================================================================
   // 10. GLOBAL ERROR HANDLER (MUST BE LAST)
