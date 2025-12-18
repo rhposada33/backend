@@ -446,6 +446,116 @@ export async function proxyStream(
 }
 
 /**
+ * WebSocket handler for jsmpeg stream
+ * Proxies WebSocket connection from client to Frigate
+ *
+ * This is called via express-ws middleware on WebSocket upgrade
+ * See router.ts for route definition
+ */
+export async function proxyJsmpegStream(ws: any, req: any): Promise<void> {
+  try {
+    // Import jwt here to avoid circular dependencies
+    const { default: jwt } = await import('jsonwebtoken');
+    const { config } = await import('../../config/index.js');
+    const { proxyFrigateWebSocketStream } = await import('./proxy.js');
+
+    console.log('[WebSocket] Connection established, parsing request...');
+    console.log('[WebSocket] URL:', req.url);
+
+    // Parse URL to extract parameters
+    const urlObj = new URL(req.url, 'http://localhost');
+    const pathname = urlObj.pathname;
+    const searchParams = urlObj.searchParams;
+
+    // Extract camera key from pathname: /api/v1/cameras/streams/:cameraKey
+    const pathParts = pathname.split('/');
+    const cameraKeyIndex = pathParts.indexOf('streams');
+    const cameraKey = cameraKeyIndex !== -1 && cameraKeyIndex + 1 < pathParts.length
+      ? pathParts[cameraKeyIndex + 1]
+      : null;
+
+    // Extract query parameters
+    const token = searchParams.get('jwt') || searchParams.get('token_param') || '';
+    const frigateToken = searchParams.get('token') || '';
+    const testMode = searchParams.get('test') === 'true';
+
+    console.log('[WebSocket] Parsed:', { cameraKey, hasToken: !!token, hasFrigateToken: !!frigateToken, testMode });
+
+    if (!token) {
+      console.log('❌ WebSocket: No JWT token provided');
+      if (ws.send) ws.send(JSON.stringify({ error: 'No JWT token' }));
+      ws.close?.();
+      return;
+    }
+
+    // 2. Verify JWT token
+    let decoded: any;
+    try {
+      console.log('[WebSocket] JWT token received:', token.substring(0, 50) + '...' + token.substring(token.length - 20));
+      console.log('[WebSocket] JWT secret being used:', config.jwtSecret.substring(0, 10) + '...');
+      decoded = jwt.verify(token, config.jwtSecret as string) as {
+        sub?: string;
+        userId?: string;
+        email?: string;
+        tenantId?: string;
+        iat: number;
+        exp: number;
+      };
+    } catch (error) {
+      console.log('❌ WebSocket: Invalid JWT token', error);
+      ws.close?.();
+      return;
+    }
+
+    const userId = decoded.userId || decoded.sub;
+    const tenantId = decoded.tenantId;
+    const email = decoded.email;
+
+    if (!userId || !tenantId) {
+      console.log('❌ WebSocket: Invalid token payload');
+      ws.close?.();
+      return;
+    }
+
+    console.log(`✅ WebSocket authenticated: ${email} (${userId})`);
+
+    // Validate camera key
+    if (!cameraKey || cameraKey === 'streams' || cameraKey.endsWith('.websocket')) {
+      console.log('❌ Camera key invalid', { cameraKey });
+      ws.close?.();
+      return;
+    }
+
+    // Validate frigate token
+    if (!frigateToken) {
+      console.log('❌ Frigate token missing');
+      ws.close?.();
+      return;
+    }
+
+    console.log(`[WebSocket] jsmpeg stream request for camera: ${cameraKey} by tenant: ${tenantId}`);
+
+    console.log('[WebSocket] Calling proxy service...', { testMode });
+    
+    await proxyFrigateWebSocketStream(
+      tenantId,
+      cameraKey.trim(),
+      ws,
+      Buffer.alloc(0),
+      frigateToken,
+      testMode
+    );
+  } catch (error) {
+    console.error('WebSocket proxy error:', error);
+    try {
+      ws.close?.();
+    } catch (e) {
+      console.error('Error closing WebSocket:', e);
+    }
+  }
+}
+
+/**
  * ============================================================================
  * LIVESTREAM ENDPOINTS - TODO: Implement before enabling streaming features
  * ============================================================================

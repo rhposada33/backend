@@ -80,6 +80,16 @@ import expressWs from 'express-ws';
     .split(',')
     .map(origin => origin.trim());
   
+  // In development, allow localhost for WebSocket testing
+  if (config.nodeEnv === 'development') {
+    corsOrigins.push('http://localhost:3000');
+    corsOrigins.push('ws://localhost:3000');
+    corsOrigins.push('wss://localhost:3000');
+    corsOrigins.push('http://localhost:8971');
+    corsOrigins.push('ws://localhost:8971');
+    corsOrigins.push('wss://localhost:8971');
+  }
+  
   app.use(
     cors({
       origin: function(origin, callback) {
@@ -90,6 +100,9 @@ import expressWs from 'express-ws';
         if (corsOrigins.includes(origin)) {
           callback(null, true);
         } else {
+          // Log the rejected origin for debugging
+          console.warn(`⚠️ CORS rejected origin: ${origin}`);
+          console.warn(`   Allowed origins: ${corsOrigins.join(', ')}`);
           callback(new Error('Not allowed by CORS'));
         }
       },
@@ -160,6 +173,17 @@ import expressWs from 'express-ws';
   (wsApp as any).ws(`${config.apiPrefix}/${config.apiVersion}/events`, handleEventWebSocket);
 
   console.log(`🔌 WebSocket endpoint ready at ws://localhost:${config.port}${config.apiPrefix}/${config.apiVersion}/events`);
+
+  // ============================================================================
+  // 8.6. CAMERA STREAM WEBSOCKET HANDLER (JSMPEG)
+  // ============================================================================
+  const { proxyJsmpegStream } = await import('./modules/camera/controller.js');
+
+  // WebSocket endpoint for jsmpeg camera streams
+  // Usage: ws://localhost:3000/api/v1/cameras/streams/:cameraKey?token=<frigate_token>
+  (wsApp as any).ws(`${config.apiPrefix}/${config.apiVersion}/cameras/streams/:cameraKey`, proxyJsmpegStream);
+
+  console.log(`📹 Camera WebSocket stream endpoint ready at ws://localhost:${config.port}${config.apiPrefix}/${config.apiVersion}/cameras/streams/:cameraKey`);
 
   // ============================================================================
   // 9. MOUNT API ROUTERS

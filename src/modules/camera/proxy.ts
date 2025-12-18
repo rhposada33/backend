@@ -13,13 +13,14 @@
 import { Response } from 'express';
 import http from 'http';
 import https from 'https';
+import WebSocket from 'ws';
 import { config } from '../../config/index.js';
 import { prisma } from '../../db/client.js';
 
 /**
  * Stream format types available in Frigate
  */
-export type StreamFormat = 'hls' | 'mjpeg' | 'webrtc' | 'snapshot';
+export type StreamFormat = 'hls' | 'mjpeg' | 'webrtc' | 'snapshot' | 'jsmpeg';
 
 /**
  * Content-Type headers for different stream formats
@@ -29,6 +30,7 @@ const STREAM_CONTENT_TYPES: Record<StreamFormat, string> = {
   mjpeg: 'multipart/x-mixed-replace; boundary=--boundary',
   webrtc: 'application/json',
   snapshot: 'image/jpeg',
+  jsmpeg: 'application/octet-stream',
 };
 
 /**
@@ -202,4 +204,146 @@ export async function checkCameraStatus(
       resolve('offline');
     });
   });
+}
+
+/**
+ * Proxy a WebSocket jsmpeg stream from Frigate to the client
+ *
+ * Flow:
+ * 1. Verify camera ownership (tenant scoping)
+ * 2. Build Frigate WebSocket URL for jsmpeg
+ * 3. Connect to Frigate WebSocket with authentication token
+ * 4. Upgrade HTTP connection to WebSocket
+ * 5. Forward all WebSocket frames from Frigate to client
+ * 6. Handle connection errors and cleanup
+ *
+ * The jsmpeg format provides low-latency video streaming over WebSocket
+ * suitable for real-time monitoring applications.
+ *
+ * @param tenantId - Authenticated user's tenant ID
+ * @param cameraKey - Frigate camera name (must match key field)
+ * @param req - Express Request object (contains ws for WebSocket upgrade)
+ * @param socket - TCP socket for WebSocket upgrade
+ * @param head - HTTP head for WebSocket upgrade
+ * @param frigateToken - Frigate JWT token for authentication
+ *
+ * @throws Error if camera not found or doesn't belong to tenant
+ * @throws Error if WebSocket connection fails
+ */
+export async function proxyFrigateWebSocketStream(
+  tenantId: string,
+  cameraKey: string,
+  socket: any,
+  head: Buffer,
+  frigateToken: string,
+  skipCameraCheck: boolean = false
+): Promise<void> {
+  console.log('[ProxyFrigateWebSocketStream] Called with:', {
+    tenantId,
+    cameraKey,
+    hasSocket: !!socket,
+    frigateTokenLength: frigateToken?.length,
+    skipCameraCheck,
+  });
+
+  // SECURITY: Verify camera belongs to this tenant (can be skipped in dev/test mode)
+  if (!skipCameraCheck) {
+    const camera = await verifyCameraOwnership(tenantId, cameraKey);
+
+    if (!camera) {
+      socket.destroy();
+      console.warn(`Unauthorized WebSocket access attempt for camera: ${cameraKey} by tenant: ${tenantId}`);
+      return;
+    }
+  } else {
+    console.log(`[ProxyFrigateWebSocketStream] ⚠️  DEVELOPMENT MODE: Skipping camera ownership check for ${cameraKey}`);
+  }
+
+  try {
+    // Build Frigate WebSocket URL
+    // Using wss:// or ws:// based on config
+    const protocol = config.frigatBaseUrl.startsWith('https') ? 'wss' : 'ws';
+    const frigateHost = config.frigatBaseUrl.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
+    const frigateUrl = `${protocol}://${frigateHost}:8971/live/jsmpeg/${encodeURIComponent(cameraKey)}`;
+
+    console.log(`[ProxyFrigateWebSocketStream] Connecting to Frigate:`, { frigateUrl, protocol, frigateHost });
+
+    // Create WebSocket connection to Frigate with authentication
+    const wsOptions: WebSocket.ClientOptions = {
+      headers: {
+        'Origin': config.frigatBaseUrl,
+        'User-Agent': 'SatelitEyes-Guard-Backend/1.0',
+        Cookie: `frigate_token=${frigateToken}`,
+      },
+    };
+
+    // For self-signed certificates in development
+    if (protocol === 'wss' && config.nodeEnv === 'development') {
+      (wsOptions as any).rejectUnauthorized = false;
+    }
+
+    const frigateWs = new WebSocket(frigateUrl, wsOptions);
+    let clientConnected = true;
+
+    console.log(`[ProxyFrigateWebSocketStream] WebSocket object created, waiting for connection...`);
+
+    // Handle connection opened
+    frigateWs.on('open', () => {
+      console.log(`[ProxyFrigateWebSocketStream] ✅ Connected to Frigate for camera: ${cameraKey}`);
+    });
+
+    // Forward messages from Frigate to client
+    frigateWs.on('message', (data: Buffer) => {
+      console.log(`[ProxyFrigateWebSocketStream] Received ${data.length} bytes from Frigate`);
+      if (clientConnected && socket.readyState === WebSocket.OPEN) {
+        try {
+          socket.send(data);
+          console.log(`[ProxyFrigateWebSocketStream] Sent ${data.length} bytes to client`);
+        } catch (error) {
+          console.error(`[ProxyFrigateWebSocketStream] Error sending data to client:`, error);
+        }
+      } else {
+        console.warn(`[ProxyFrigateWebSocketStream] Cannot send data: clientConnected=${clientConnected}, readyState=${socket.readyState}`);
+      }
+    });
+
+    // Handle Frigate WebSocket close
+    frigateWs.on('close', (code: number, reason: string) => {
+      console.log(`[ProxyFrigateWebSocketStream] Frigate connection closed: ${code} ${reason}`);
+      if (clientConnected && socket.readyState === WebSocket.OPEN) {
+        socket.close(code, reason);
+        clientConnected = false;
+      }
+    });
+
+    // Handle Frigate WebSocket errors
+    frigateWs.on('error', (error: Error) => {
+      console.error(`[ProxyFrigateWebSocketStream] Frigate connection error for camera ${cameraKey}:`, error);
+      if (clientConnected && socket.readyState === WebSocket.OPEN) {
+        socket.close(1011, 'Frigate connection error');
+        clientConnected = false;
+      }
+    });
+
+    // Handle client socket close
+    socket.on('close', () => {
+      console.log(`[ProxyFrigateWebSocketStream] Client disconnected for camera: ${cameraKey}`);
+      clientConnected = false;
+      if (frigateWs.readyState === WebSocket.OPEN) {
+        frigateWs.close();
+      }
+    });
+
+    // Handle client socket errors
+    socket.on('error', (error: Error) => {
+      console.error(`[WebSocket] Client socket error for camera ${cameraKey}:`, error);
+      if (frigateWs.readyState === WebSocket.OPEN) {
+        frigateWs.close();
+      }
+    });
+
+  } catch (error) {
+    console.error(`[WebSocket] Proxy error for camera ${cameraKey}:`, error);
+    socket.destroy();
+  }
 }

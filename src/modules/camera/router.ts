@@ -14,6 +14,7 @@ import {
   deleteCamera,
   getCameraStreams,
   proxyStream,
+  proxyJsmpegStream,
 } from './controller.js';
 
 export const cameraRouter = Router();
@@ -324,5 +325,64 @@ cameraRouter.get('/streams', authMiddleware, getCameraStreams);
 cameraRouter.get('/:id', authMiddleware, getCamera);
 cameraRouter.put('/:id', authMiddleware, updateCamera);
 cameraRouter.delete('/:id', authMiddleware, deleteCamera);
+
+/**
+ * @swagger
+ * /cameras/stream/{cameraKey}:
+ *   get:
+ *     tags:
+ *       - Cameras
+ *     summary: Proxy camera stream from Frigate
+ *     description: Stream video from a camera. Returns a continuous video stream in the requested format. The format parameter defaults to HLS but supports mjpeg, webrtc, and snapshot.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: cameraKey
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Frigate camera key/name (e.g., 'webcam')
+ *       - in: query
+ *         name: format
+ *         schema:
+ *           type: string
+ *           enum: [hls, mjpeg, webrtc, snapshot]
+ *           default: hls
+ *         description: Stream format (hls=HLS playlist, mjpeg=Motion JPEG, webrtc=WebRTC, snapshot=static image)
+ *     responses:
+ *       200:
+ *         description: Stream started
+ *         content:
+ *           video/mp2t:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: Invalid request (camera key or format)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized - missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedError'
+ *       403:
+ *         description: Forbidden - camera does not belong to your tenant
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       503:
+ *         description: Service unavailable - Frigate is offline
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+cameraRouter.get('/stream/:cameraKey', authMiddleware, proxyStream);
 
 export default cameraRouter;
