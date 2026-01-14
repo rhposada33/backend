@@ -20,6 +20,8 @@ model Tenant {
   users   User[]
   cameras Camera[]
   events  Event[]
+  reviews Review[]
+  availabilityLogs AvailabilityLog[]
 
   @@map("tenants")
 }
@@ -46,6 +48,7 @@ model Camera {
   createdAt          DateTime @default(now())
   
   events Event[]
+  reviews Review[]
 
   @@unique([tenantId, frigateCameraKey])
   @@map("cameras")
@@ -72,4 +75,39 @@ model Event {
   @@index([cameraId])
   @@index([createdAt])
   @@map("events")
+}
+
+model Review {
+  id         String @id @default(cuid())
+  tenantId   String
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cameraId   String
+  camera     Camera @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  reviewId   String
+  cameraName String
+  severity   String
+  retracted  Boolean @default(false)
+  timestamp  DateTime?
+  rawPayload Json
+  createdAt  DateTime @default(now())
+
+  @@unique([tenantId, reviewId])
+  @@index([tenantId])
+  @@index([cameraId])
+  @@index([createdAt])
+  @@map("reviews")
+}
+
+model AvailabilityLog {
+  id         String @id @default(cuid())
+  tenantId   String
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  available  Boolean
+  timestamp  DateTime
+  rawPayload Json
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([createdAt])
+  @@map("availability_logs")
 }
