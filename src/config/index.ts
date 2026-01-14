@@ -15,6 +15,7 @@ interface Config {
   enableMultiTenant: boolean;
   logLevel: string;
   frigatBaseUrl: string;
+  frigateAuthToken?: string;
   // TODO: Add database configuration
   // TODO: Add additional config properties as needed
 }
@@ -25,6 +26,7 @@ function getConfig(): Config {
   
   // Frigate base URL - defaults to local Docker Frigate instance
   const frigatBaseUrl = process.env.FRIGATE_BASE_URL || 'http://frigate:5000';
+  const frigateAuthToken = process.env.FRIGATE_AUTH_TOKEN;
   
   return {
     port: parseInt(process.env.PORT || '3000', 10),
@@ -39,6 +41,7 @@ function getConfig(): Config {
     enableMultiTenant: process.env.ENABLE_MULTI_TENANT === 'true',
     logLevel: process.env.LOG_LEVEL || 'info',
     frigatBaseUrl,
+    frigateAuthToken,
     // TODO: Initialize database configuration from environment
     // TODO: Add additional configuration properties
   };

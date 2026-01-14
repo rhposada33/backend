@@ -23,8 +23,10 @@ export interface AlarmItem {
   startTime: number | null;
   endTime: number | null;
   createdAt: Date;
-  status: 'unresolved';
+  status: 'unresolved' | 'acknowledged' | 'resolved';
   severity: 'detection';
+  acknowledgedAt: Date | null;
+  resolvedAt: Date | null;
   camera: {
     id: string;
     frigateCameraKey: string;
@@ -35,6 +37,12 @@ export interface AlarmItem {
 export interface ListAlarmsResult {
   alarms: AlarmItem[];
   total: number;
+}
+
+export interface AlarmMediaInfo {
+  frigateId: string;
+  hasSnapshot: boolean;
+  hasClip: boolean;
 }
 
 export async function getAlarmsByTenant(
@@ -93,10 +101,133 @@ export async function getAlarmsByTenant(
     startTime: event.startTime ?? null,
     endTime: event.endTime ?? null,
     createdAt: event.createdAt,
-    status: 'unresolved' as const,
+    status: (event.status as AlarmItem['status']) || 'unresolved',
     severity: 'detection' as const,
+    acknowledgedAt: event.acknowledgedAt ?? null,
+    resolvedAt: event.resolvedAt ?? null,
     camera: event.camera,
   }));
 
   return { alarms, total };
+}
+
+export async function getAlarmMediaInfo(
+  tenantId: string,
+  alarmId: string
+): Promise<AlarmMediaInfo | null> {
+  const event = await prisma.event.findFirst({
+    where: { id: alarmId, tenantId },
+    select: {
+      frigateId: true,
+      hasSnapshot: true,
+      hasClip: true,
+    },
+  });
+
+  if (!event) {
+    return null;
+  }
+
+  return {
+    frigateId: event.frigateId,
+    hasSnapshot: event.hasSnapshot,
+    hasClip: event.hasClip,
+  };
+}
+
+export async function acknowledgeAlarm(
+  tenantId: string,
+  alarmId: string
+): Promise<AlarmItem | null> {
+  const event = await prisma.event.findFirst({
+    where: { id: alarmId, tenantId },
+  });
+
+  if (!event) {
+    return null;
+  }
+
+  const updated = await prisma.event.update({
+    where: { id: event.id },
+    data: {
+      status: 'acknowledged',
+      acknowledgedAt: event.acknowledgedAt ?? new Date(),
+    },
+    include: {
+      camera: {
+        select: {
+          id: true,
+          frigateCameraKey: true,
+          label: true,
+        },
+      },
+    },
+  });
+
+  return {
+    id: updated.id,
+    frigateId: updated.frigateId,
+    type: updated.type,
+    label: updated.label,
+    hasSnapshot: updated.hasSnapshot,
+    hasClip: updated.hasClip,
+    startTime: updated.startTime ?? null,
+    endTime: updated.endTime ?? null,
+    createdAt: updated.createdAt,
+    status: (updated.status as AlarmItem['status']) || 'unresolved',
+    severity: 'detection',
+    acknowledgedAt: updated.acknowledgedAt ?? null,
+    resolvedAt: updated.resolvedAt ?? null,
+    camera: updated.camera,
+  };
+}
+
+export async function resolveAlarm(
+  tenantId: string,
+  alarmId: string
+): Promise<AlarmItem | null> {
+  const event = await prisma.event.findFirst({
+    where: { id: alarmId, tenantId },
+  });
+
+  if (!event) {
+    return null;
+  }
+
+  const now = new Date();
+
+  const updated = await prisma.event.update({
+    where: { id: event.id },
+    data: {
+      status: 'resolved',
+      acknowledgedAt: event.acknowledgedAt ?? now,
+      resolvedAt: now,
+    },
+    include: {
+      camera: {
+        select: {
+          id: true,
+          frigateCameraKey: true,
+          label: true,
+        },
+      },
+    },
+  });
+
+  return {
+    id: updated.id,
+    frigateId: updated.frigateId,
+    type: updated.type,
+    label: updated.label,
+    hasSnapshot: updated.hasSnapshot,
+    hasClip: updated.hasClip,
+    startTime: updated.startTime ?? null,
+    endTime: updated.endTime ?? null,
+    createdAt: updated.createdAt,
+    status: (updated.status as AlarmItem['status']) || 'unresolved',
+    severity: 'detection',
+    acknowledgedAt: updated.acknowledgedAt ?? null,
+    resolvedAt: updated.resolvedAt ?? null,
+    camera: updated.camera,
+  };
 }

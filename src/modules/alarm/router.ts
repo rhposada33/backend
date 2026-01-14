@@ -7,7 +7,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../auth/middleware.js';
 import { asyncHandler } from '../../middleware/errorHandler.js';
-import { listAlarms } from './controller.js';
+import { listAlarms, acknowledgeAlarm, resolveAlarm, getAlarmSnapshot, getAlarmClip } from './controller.js';
 
 export const alarmRouter = Router();
 
@@ -74,5 +74,9 @@ export const alarmRouter = Router();
  *         description: Server error
  */
 alarmRouter.get('/', authMiddleware, asyncHandler(listAlarms));
+alarmRouter.patch('/:id/acknowledge', authMiddleware, asyncHandler(acknowledgeAlarm));
+alarmRouter.patch('/:id/resolve', authMiddleware, asyncHandler(resolveAlarm));
+alarmRouter.get('/:id/snapshot', authMiddleware, asyncHandler(getAlarmSnapshot));
+alarmRouter.get('/:id/clip', authMiddleware, asyncHandler(getAlarmClip));
 
 export default alarmRouter;
