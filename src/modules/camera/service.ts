@@ -32,11 +32,20 @@ import { config } from '../../config/index.js';
 export interface CreateCameraInput {
   frigateCameraKey: string; // Frigate camera name - must be unique per tenant and match Frigate config
   label?: string; // Human-readable display name for UI
+  ip?: string;
+  port?: number;
+  username?: string;
+  password?: string;
 }
 
 export interface UpdateCameraInput {
   frigateCameraKey?: string;
   label?: string;
+  isEnabled?: boolean;
+  ip?: string | null;
+  port?: number | null;
+  username?: string | null;
+  password?: string | null;
 }
 
 export interface CameraResponse {
@@ -44,6 +53,10 @@ export interface CameraResponse {
   tenantId: string;
   frigateCameraKey: string;
   label?: string | null;
+  ip?: string | null;
+  port?: number | null;
+  username?: string | null;
+  password?: string | null;
   isEnabled: boolean;
   createdAt: Date;
 }
@@ -82,6 +95,10 @@ export async function createCamera(
       tenantId,
       frigateCameraKey: trimmedKey,
       label: input.label?.trim() || null,
+      ip: input.ip?.trim() || null,
+      port: input.port ?? null,
+      username: input.username?.trim() || null,
+      password: input.password ?? null,
       isEnabled: true,
     },
   });
@@ -91,6 +108,10 @@ export async function createCamera(
     tenantId: camera.tenantId,
     frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    ip: camera.ip || undefined,
+    port: camera.port ?? undefined,
+    username: camera.username || undefined,
+    password: camera.password || undefined,
     isEnabled: camera.isEnabled,
     createdAt: camera.createdAt,
   };
@@ -119,6 +140,10 @@ export async function getCameraById(
     tenantId: camera.tenantId,
     frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    ip: camera.ip || undefined,
+    port: camera.port ?? undefined,
+    username: camera.username || undefined,
+    password: camera.password || undefined,
     isEnabled: camera.isEnabled,
     createdAt: camera.createdAt,
   };
@@ -151,6 +176,10 @@ export async function getCamerasByTenant(
       tenantId: camera.tenantId,
       frigateCameraKey: camera.frigateCameraKey,
       label: camera.label || undefined,
+      ip: camera.ip || undefined,
+      port: camera.port ?? undefined,
+      username: camera.username || undefined,
+      password: camera.password || undefined,
       isEnabled: camera.isEnabled,
       createdAt: camera.createdAt,
     });
@@ -206,6 +235,7 @@ export async function updateCamera(
       data: {
         frigateCameraKey: trimmedKey,
         label: input.label !== undefined ? input.label?.trim() || null : camera.label,
+        isEnabled: input.isEnabled !== undefined ? input.isEnabled : camera.isEnabled,
       },
     });
 
@@ -214,6 +244,10 @@ export async function updateCamera(
       tenantId: updated.tenantId,
       frigateCameraKey: updated.frigateCameraKey,
       label: updated.label || undefined,
+      ip: updated.ip || undefined,
+      port: updated.port ?? undefined,
+      username: updated.username || undefined,
+      password: updated.password || undefined,
       isEnabled: updated.isEnabled,
       createdAt: updated.createdAt,
     };
@@ -223,6 +257,26 @@ export async function updateCamera(
   const dataToUpdate: any = {};
   if (input.label !== undefined) {
     dataToUpdate.label = input.label.trim() || null;
+  }
+
+  if (input.ip !== undefined) {
+    dataToUpdate.ip = input.ip ? input.ip.trim() : null;
+  }
+
+  if (input.port !== undefined) {
+    dataToUpdate.port = input.port;
+  }
+
+  if (input.username !== undefined) {
+    dataToUpdate.username = input.username ? input.username.trim() : null;
+  }
+
+  if (input.password !== undefined) {
+    dataToUpdate.password = input.password;
+  }
+
+  if (input.isEnabled !== undefined) {
+    dataToUpdate.isEnabled = input.isEnabled;
   }
 
   if (Object.keys(dataToUpdate).length > 0) {
@@ -236,6 +290,10 @@ export async function updateCamera(
       tenantId: updated.tenantId,
       frigateCameraKey: updated.frigateCameraKey,
       label: updated.label || undefined,
+      ip: updated.ip || undefined,
+      port: updated.port ?? undefined,
+      username: updated.username || undefined,
+      password: updated.password || undefined,
       isEnabled: updated.isEnabled,
       createdAt: updated.createdAt,
     };
@@ -247,6 +305,10 @@ export async function updateCamera(
     tenantId: camera.tenantId,
     frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    ip: camera.ip || undefined,
+    port: camera.port ?? undefined,
+    username: camera.username || undefined,
+    password: camera.password || undefined,
     isEnabled: camera.isEnabled,
     createdAt: camera.createdAt,
   };
@@ -302,6 +364,10 @@ export async function getCameraByKey(
     tenantId: camera.tenantId,
     frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    ip: camera.ip || undefined,
+    port: camera.port ?? undefined,
+    username: camera.username || undefined,
+    password: camera.password || undefined,
     isEnabled: camera.isEnabled,
     createdAt: camera.createdAt,
   };
@@ -373,4 +439,3 @@ function buildCameraStream(camera: {
 // TODO: getCameraStreamStatus(tenantId: string, cameraId: string): Promise<'live' | 'offline' | 'recording'>
 // TODO: validateCameraKeyWithFrigate(key: string): Promise<boolean>
 // TODO: proxyCameraStream(tenantId: string, cameraId: string, response: Response): Promise<void>
-

@@ -38,7 +38,7 @@ export async function createCamera(
   res: Response
 ): Promise<void> {
   try {
-    const { key, label } = req.body;
+    const { key, label, isEnabled, ip, port, username, password } = req.body;
 
     // Verify authenticated
     if (!req.user) {
@@ -66,9 +66,53 @@ export async function createCamera(
       return;
     }
 
+    if (isEnabled !== undefined && typeof isEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'isEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (ip !== undefined && typeof ip !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'ip must be a string',
+      });
+      return;
+    }
+
+    if (port !== undefined && (typeof port !== 'number' || Number.isNaN(port))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'port must be a number',
+      });
+      return;
+    }
+
+    if (username !== undefined && typeof username !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'username must be a string',
+      });
+      return;
+    }
+
+    if (password !== undefined && typeof password !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'password must be a string',
+      });
+      return;
+    }
+
     const camera = await cameraService.createCamera(req.user.tenantId, {
       frigateCameraKey: key,
       label,
+      ip,
+      port,
+      username,
+      password,
     });
 
     res.status(201).json({
@@ -215,13 +259,13 @@ export async function updateCamera(
     }
 
     const { id } = req.params;
-    const { key, label } = req.body;
+    const { key, label, isEnabled, ip, port, username, password } = req.body;
 
     // Validate input - at least one field must be provided
-    if (key === undefined && label === undefined) {
+    if (key === undefined && label === undefined && isEnabled === undefined && ip === undefined && port === undefined && username === undefined && password === undefined) {
       res.status(400).json({
         error: 'Bad Request',
-        message: 'At least one field (key or label) must be provided',
+        message: 'At least one field must be provided',
       });
       return;
     }
@@ -243,9 +287,54 @@ export async function updateCamera(
       return;
     }
 
+    if (isEnabled !== undefined && typeof isEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'isEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (ip !== undefined && typeof ip !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'ip must be a string',
+      });
+      return;
+    }
+
+    if (port !== undefined && (typeof port !== 'number' || Number.isNaN(port))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'port must be a number',
+      });
+      return;
+    }
+
+    if (username !== undefined && typeof username !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'username must be a string',
+      });
+      return;
+    }
+
+    if (password !== undefined && typeof password !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'password must be a string',
+      });
+      return;
+    }
+
     const camera = await cameraService.updateCamera(req.user.tenantId, id, {
       frigateCameraKey: key,
       label,
+      isEnabled,
+      ip,
+      port,
+      username,
+      password,
     });
 
     res.status(200).json({
@@ -583,4 +672,3 @@ export async function proxyJsmpegStream(ws: any, req: any): Promise<void> {
 // TODO: getCameraMJPEGStream(req: AuthenticatedRequest, res: Response): Promise<void>
 // TODO: getCameraHLSStream(req: AuthenticatedRequest, res: Response): Promise<void>
 // TODO: getCameraStreamStatus(req: AuthenticatedRequest, res: Response): Promise<void>
-

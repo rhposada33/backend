@@ -324,6 +324,7 @@ cameraRouter.get('/streams', authMiddleware, getCameraStreams);
  */
 cameraRouter.get('/:id', authMiddleware, getCamera);
 cameraRouter.put('/:id', authMiddleware, updateCamera);
+cameraRouter.patch('/:id', authMiddleware, updateCamera);
 cameraRouter.delete('/:id', authMiddleware, deleteCamera);
 
 /**

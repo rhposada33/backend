@@ -49,6 +49,10 @@ model Camera {
   tenant             Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   frigateCameraKey   String // Frigate camera name/identifier
   label              String?
+  ip                 String?
+  port               Int?
+  username           String?
+  password           String?
   isEnabled          Boolean @default(true)
   createdAt          DateTime @default(now())
   
