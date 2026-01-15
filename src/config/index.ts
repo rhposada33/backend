@@ -16,6 +16,7 @@ interface Config {
   logLevel: string;
   frigatBaseUrl: string;
   frigateAuthToken?: string;
+  frigateMediaPath?: string;
   // TODO: Add database configuration
   // TODO: Add additional config properties as needed
 }
@@ -27,6 +28,7 @@ function getConfig(): Config {
   // Frigate base URL - defaults to local Docker Frigate instance
   const frigatBaseUrl = process.env.FRIGATE_BASE_URL || 'http://frigate:5000';
   const frigateAuthToken = process.env.FRIGATE_AUTH_TOKEN;
+  const frigateMediaPath = process.env.FRIGATE_MEDIA_PATH;
   
   return {
     port: parseInt(process.env.PORT || '3000', 10),
@@ -42,6 +44,7 @@ function getConfig(): Config {
     logLevel: process.env.LOG_LEVEL || 'info',
     frigatBaseUrl,
     frigateAuthToken,
+    frigateMediaPath,
     // TODO: Initialize database configuration from environment
     // TODO: Add additional configuration properties
   };

@@ -43,6 +43,8 @@ export interface AlarmMediaInfo {
   frigateId: string;
   hasSnapshot: boolean;
   hasClip: boolean;
+  cameraKey: string;
+  startTime: number | null;
 }
 
 export async function getAlarmsByTenant(
@@ -121,6 +123,12 @@ export async function getAlarmMediaInfo(
       frigateId: true,
       hasSnapshot: true,
       hasClip: true,
+      startTime: true,
+      camera: {
+        select: {
+          frigateCameraKey: true,
+        },
+      },
     },
   });
 
@@ -132,6 +140,8 @@ export async function getAlarmMediaInfo(
     frigateId: event.frigateId,
     hasSnapshot: event.hasSnapshot,
     hasClip: event.hasClip,
+    cameraKey: event.camera.frigateCameraKey,
+    startTime: event.startTime ?? null,
   };
 }
 

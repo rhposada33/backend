@@ -8,8 +8,8 @@ import { AuthenticatedRequest } from '../../auth/middleware.js';
 import { AuthenticationError, ValidationError, NotFoundError } from '../../middleware/errorHandler.js';
 import * as alarmService from './service.js';
 import { config } from '../../config/index.js';
-import http from 'http';
-import https from 'https';
+import fs from 'fs';
+import path from 'path';
 
 function parseDate(value: string | undefined, fieldName: string): Date | undefined {
   if (!value) return undefined;
@@ -113,63 +113,89 @@ export async function resolveAlarm(
   });
 }
 
-async function proxyFrigateEventAsset(
-  frigateId: string,
-  assetPath: string,
-  res: Response
-): Promise<void> {
-  const frigateUrl = `${config.frigatBaseUrl}/api/events/${encodeURIComponent(frigateId)}/${assetPath}`;
-  const protocol = config.frigatBaseUrl.startsWith('https') ? https : http;
-  const requestOptions: https.RequestOptions = {};
+function getContentType(filePath: string): string {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.jpg' || ext === '.jpeg') {
+    return 'image/jpeg';
+  }
+  if (ext === '.png') {
+    return 'image/png';
+  }
+  if (ext === '.webp') {
+    return 'image/webp';
+  }
+  if (ext === '.mp4') {
+    return 'video/mp4';
+  }
+  return 'application/octet-stream';
+}
 
-  if (config.frigatBaseUrl.startsWith('https') && config.nodeEnv === 'development') {
-    requestOptions.rejectUnauthorized = false;
+async function findFirstExistingPath(paths: string[]): Promise<string | null> {
+  for (const candidate of paths) {
+    try {
+      await fs.promises.stat(candidate);
+      return candidate;
+    } catch {
+      // ignore missing file
+    }
+  }
+  return null;
+}
+
+function parseEventTimestamp(frigateId: string, startTime: number | null): number | null {
+  if (typeof startTime === 'number' && !Number.isNaN(startTime)) {
+    return startTime;
   }
 
-  if (config.frigateAuthToken) {
-    requestOptions.headers = {
-      Authorization: `Bearer ${config.frigateAuthToken}`,
-      Cookie: `frigate_token=${config.frigateAuthToken}`,
-    };
+  const prefix = frigateId.split('-')[0];
+  const parsed = Number.parseFloat(prefix);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+async function findPreviewClip(
+  basePath: string,
+  cameraKey: string,
+  eventTimestamp: number
+): Promise<string | null> {
+  const previewDir = path.join(basePath, 'clips', 'previews', cameraKey);
+  try {
+    const entries = await fs.promises.readdir(previewDir);
+    for (const entry of entries) {
+      if (!entry.endsWith('.mp4')) continue;
+      const name = entry.replace('.mp4', '');
+      const parts = name.split('-');
+      if (parts.length < 2) continue;
+      const start = Number.parseFloat(parts[0]);
+      const end = Number.parseFloat(parts[1]);
+      if (Number.isNaN(start) || Number.isNaN(end)) continue;
+      if (eventTimestamp >= start && eventTimestamp <= end) {
+        return path.join(previewDir, entry);
+      }
+    }
+  } catch {
+    return null;
   }
 
-  const request = protocol.get(frigateUrl, requestOptions, (frigateResponse) => {
-    const contentType = frigateResponse.headers['content-type'];
-    if (contentType) {
-      res.setHeader('Content-Type', contentType);
-    }
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+  return null;
+}
 
-    if (frigateResponse.statusCode && frigateResponse.statusCode >= 400) {
-      res.status(frigateResponse.statusCode);
-    }
+async function streamLocalFile(filePath: string, res: Response): Promise<void> {
+  res.setHeader('Content-Type', getContentType(filePath));
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
 
-    frigateResponse.pipe(res);
-  });
-
-  request.on('error', (error) => {
-    console.error(`Frigate proxy error for event ${frigateId}:`, error);
+  const stream = fs.createReadStream(filePath);
+  stream.on('error', (error) => {
+    console.error('Failed to read media file', { filePath, error });
     if (!res.headersSent) {
-      res.status(503).json({
-        error: 'Service Unavailable',
-        message: 'Frigate is unavailable or event media is missing',
-      });
-    } else {
-      res.end();
-    }
-  });
-
-  request.setTimeout(30000, () => {
-    request.destroy();
-    if (!res.headersSent) {
-      res.status(504).json({
-        error: 'Gateway Timeout',
-        message: 'Frigate request timed out',
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: 'Failed to read media file',
       });
     }
   });
+  stream.pipe(res);
 }
 
 /**
@@ -191,6 +217,14 @@ export async function getAlarmSnapshot(
     throw new NotFoundError('Alarm not found');
   }
 
+  if (!config.frigateMediaPath) {
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'FRIGATE_MEDIA_PATH is not configured',
+    });
+    return;
+  }
+
   if (!media.hasSnapshot) {
     res.status(404).json({
       error: 'Not Found',
@@ -199,7 +233,22 @@ export async function getAlarmSnapshot(
     return;
   }
 
-  await proxyFrigateEventAsset(media.frigateId, 'snapshot.jpg', res);
+  const basePath = config.frigateMediaPath;
+  const filePath = await findFirstExistingPath([
+    path.join(basePath, 'clips', `${media.cameraKey}-${media.frigateId}.jpg`),
+    path.join(basePath, 'clips', `${media.cameraKey}-${media.frigateId}-clean.png`),
+    path.join(basePath, 'clips', 'thumbs', media.cameraKey, `${media.frigateId}.webp`),
+  ]);
+
+  if (!filePath) {
+    res.status(404).json({
+      error: 'Not Found',
+      message: 'Snapshot file not found on disk',
+    });
+    return;
+  }
+
+  await streamLocalFile(filePath, res);
 }
 
 /**
@@ -221,6 +270,14 @@ export async function getAlarmClip(
     throw new NotFoundError('Alarm not found');
   }
 
+  if (!config.frigateMediaPath) {
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'FRIGATE_MEDIA_PATH is not configured',
+    });
+    return;
+  }
+
   if (!media.hasClip) {
     res.status(404).json({
       error: 'Not Found',
@@ -229,5 +286,27 @@ export async function getAlarmClip(
     return;
   }
 
-  await proxyFrigateEventAsset(media.frigateId, 'clip.mp4', res);
+  const basePath = config.frigateMediaPath;
+  const filePath = await findFirstExistingPath([
+    path.join(basePath, 'clips', `${media.cameraKey}-${media.frigateId}.mp4`),
+  ]);
+
+  if (filePath) {
+    await streamLocalFile(filePath, res);
+    return;
+  }
+
+  const eventTimestamp = parseEventTimestamp(media.frigateId, media.startTime);
+  if (eventTimestamp !== null) {
+    const previewClip = await findPreviewClip(basePath, media.cameraKey, eventTimestamp);
+    if (previewClip) {
+      await streamLocalFile(previewClip, res);
+      return;
+    }
+  }
+
+  res.status(404).json({
+    error: 'Not Found',
+    message: 'Clip file not found on disk',
+  });
 }
