@@ -184,10 +184,37 @@ export async function getExploreEvents(
 export async function getExploreSummary(
   tenantId: string
 ): Promise<Record<string, number>> {
-  const events = await getExploreEvents(tenantId, { limit: 200 });
+  const tenantCameras = await getTenantCameraKeys(tenantId);
+
+  try {
+    const rawSummary = await fetchFrigateJson<
+      Array<{ label: string; count: number }> | Record<string, number>
+    >('/api/events/summary');
+
+    if (Array.isArray(rawSummary)) {
+      const mapped: Record<string, number> = {};
+      for (const entry of rawSummary) {
+        if (entry && entry.label) {
+          mapped[entry.label] = entry.count ?? 0;
+        }
+      }
+      return mapped;
+    }
+
+    if (rawSummary && typeof rawSummary === 'object') {
+      return rawSummary as Record<string, number>;
+    }
+  } catch {
+    // fall back to local aggregation below
+  }
+
+  const events = await getExploreEvents(tenantId, { limit: 1000 });
   const summary: Record<string, number> = {};
 
   for (const event of events) {
+    if (!tenantCameras.includes(event.camera)) {
+      continue;
+    }
     const label = event.label || 'unknown';
     summary[label] = (summary[label] || 0) + 1;
   }
