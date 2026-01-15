@@ -5,4 +5,4 @@
 
 export * from './service.js';
 export * from './controller.js';
-export { authRouter } from './router.js';
+export { authRouter, userRouter } from './router.js';

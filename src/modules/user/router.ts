@@ -4,9 +4,10 @@
  */
 
 import { Router } from 'express';
-import { register, login } from './controller.js';
+import { register, login, listTenantUsers, createTenantUser, updateTenantUser, deleteTenantUser } from './controller.js';
 
 export const authRouter = Router();
+export const userRouter = Router();
 
 /**
  * @swagger
@@ -97,3 +98,8 @@ authRouter.post('/register', register);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 authRouter.post('/login', login);
+
+userRouter.get('/', listTenantUsers);
+userRouter.post('/', createTenantUser);
+userRouter.patch('/:id', updateTenantUser);
+userRouter.delete('/:id', deleteTenantUser);

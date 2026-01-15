@@ -151,7 +151,7 @@ export async function getTenantUsers(tenantId: string) {
     select: {
       id: true,
       email: true,
-      isAdmin: true,
+      role: true,
       createdAt: true,
     },
     orderBy: { createdAt: 'desc' },
@@ -166,8 +166,8 @@ export async function getTenantUsers(tenantId: string) {
 export async function isUserAdmin(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { isAdmin: true },
+    select: { role: true },
   });
 
-  return user?.isAdmin ?? false;
+  return user?.role === 'ADMIN';
 }

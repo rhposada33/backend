@@ -23,9 +23,29 @@ export interface AuthResponse {
     id: string;
     email: string;
     tenantId: string;
-    isAdmin: boolean;
+    role: 'ADMIN' | 'CLIENT';
   };
   token: string;
+}
+
+export interface UserListItem {
+  id: string;
+  email: string;
+  role: 'ADMIN' | 'CLIENT';
+  tenantId: string;
+  createdAt: Date;
+}
+
+export interface CreateUserInput {
+  email: string;
+  password: string;
+  tenantId: string;
+  role: 'ADMIN' | 'CLIENT';
+}
+
+export interface UpdateUserInput {
+  email?: string;
+  role?: 'ADMIN' | 'CLIENT';
 }
 
 /**
@@ -71,6 +91,12 @@ export async function registerUser(input: RegisterInput): Promise<AuthResponse> 
     throw new Error('Tenant not found');
   }
 
+  const existingUsers = await prisma.user.count({
+    where: { tenantId: tenantId },
+  });
+
+  const assignedRole: 'ADMIN' | 'CLIENT' = existingUsers === 0 ? 'ADMIN' : 'CLIENT';
+
   // Hash password
   const hashedPassword = await hashPassword(input.password);
 
@@ -80,6 +106,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthResponse> 
       email: input.email,
       password: hashedPassword,
       tenantId: tenantId,
+      role: assignedRole,
     },
   });
 
@@ -88,6 +115,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthResponse> 
     userId: user.id,
     email: user.email,
     tenantId: user.tenantId,
+    role: user.role,
   });
 
   return {
@@ -95,7 +123,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthResponse> 
       id: user.id,
       email: user.email,
       tenantId: user.tenantId,
-      isAdmin: user.isAdmin,
+      role: user.role,
     },
     token,
   };
@@ -126,6 +154,7 @@ export async function loginUser(input: LoginInput): Promise<AuthResponse> {
     userId: user.id,
     email: user.email,
     tenantId: user.tenantId,
+    role: user.role,
   });
 
   return {
@@ -133,7 +162,7 @@ export async function loginUser(input: LoginInput): Promise<AuthResponse> {
       id: user.id,
       email: user.email,
       tenantId: user.tenantId,
-      isAdmin: user.isAdmin,
+      role: user.role,
     },
     token,
   };
@@ -149,8 +178,114 @@ export async function getUserById(userId: string) {
       id: true,
       email: true,
       tenantId: true,
-      isAdmin: true,
+      role: true,
       createdAt: true,
     },
+  });
+}
+
+/**
+ * List users for a tenant
+ */
+export async function listUsers(tenantId: string): Promise<UserListItem[]> {
+  return prisma.user.findMany({
+    where: { tenantId },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      tenantId: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+/**
+ * Create a user for a tenant
+ */
+export async function createUserForTenant(input: CreateUserInput): Promise<UserListItem> {
+  const existingUser = await prisma.user.findUnique({
+    where: { email: input.email },
+  });
+
+  if (existingUser) {
+    throw new Error('User already exists');
+  }
+
+  const hashedPassword = await hashPassword(input.password);
+
+  return prisma.user.create({
+    data: {
+      email: input.email,
+      password: hashedPassword,
+      tenantId: input.tenantId,
+      role: input.role,
+    },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      tenantId: true,
+      createdAt: true,
+    },
+  });
+}
+
+/**
+ * Update a user for a tenant
+ */
+export async function updateUserForTenant(
+  userId: string,
+  tenantId: string,
+  input: UpdateUserInput
+): Promise<UserListItem> {
+  const existingUser = await prisma.user.findFirst({
+    where: { id: userId, tenantId },
+  });
+
+  if (!existingUser) {
+    throw new Error('User not found');
+  }
+
+  if (input.email && input.email !== existingUser.email) {
+    const emailOwner = await prisma.user.findUnique({
+      where: { email: input.email },
+    });
+    if (emailOwner) {
+      throw new Error('User already exists');
+    }
+  }
+
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      ...(input.email ? { email: input.email } : {}),
+      ...(input.role ? { role: input.role } : {}),
+    },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      tenantId: true,
+      createdAt: true,
+    },
+  });
+}
+
+/**
+ * Delete a user for a tenant
+ */
+export async function deleteUserForTenant(userId: string, tenantId: string): Promise<void> {
+  const existingUser = await prisma.user.findFirst({
+    where: { id: userId, tenantId },
+  });
+
+  if (!existingUser) {
+    throw new Error('User not found');
+  }
+
+  await prisma.user.delete({
+    where: { id: userId },
   });
 }

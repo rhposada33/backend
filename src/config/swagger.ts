@@ -78,7 +78,7 @@ export const swaggerOptions = {
                 id: { type: 'string', example: 'user-uuid-1234' },
                 email: { type: 'string', example: 'user@example.com' },
                 tenantId: { type: 'string', example: 'tenant-uuid-1234' },
-                isAdmin: { type: 'boolean', example: false },
+                role: { type: 'string', enum: ['ADMIN', 'CLIENT'], example: 'CLIENT' },
                 createdAt: {
                   type: 'string',
                   format: 'date-time',
@@ -123,7 +123,7 @@ export const swaggerOptions = {
                 id: { type: 'string', example: 'user-uuid-1234' },
                 email: { type: 'string', example: 'user@example.com' },
                 tenantId: { type: 'string', example: 'tenant-uuid-1234' },
-                isAdmin: { type: 'boolean', example: false },
+                role: { type: 'string', enum: ['ADMIN', 'CLIENT'], example: 'CLIENT' },
               },
             },
             token: {

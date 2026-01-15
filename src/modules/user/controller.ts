@@ -4,7 +4,9 @@
  */
 
 import { Request, Response } from 'express';
-import { registerUser, loginUser, RegisterInput, LoginInput } from './service.js';
+import { registerUser, loginUser, listUsers, createUserForTenant, updateUserForTenant, deleteUserForTenant, LoginInput } from './service.js';
+import { AuthenticatedRequest } from '../../auth/middleware.js';
+import * as tenantService from '../tenant/service.js';
 
 /**
  * Register endpoint
@@ -126,6 +128,281 @@ export async function login(req: Request, res: Response): Promise<void> {
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to login',
+    });
+  }
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ROLE_VALUES = new Set(['ADMIN', 'CLIENT']);
+
+/**
+ * GET /users
+ * List users for the authenticated tenant (admin only)
+ */
+export async function listTenantUsers(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const isAdmin = await tenantService.isUserAdmin(req.user.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Only admins can list users',
+      });
+      return;
+    }
+
+    const users = await listUsers(req.user.tenantId);
+    res.status(200).json({
+      data: users,
+    });
+  } catch (error) {
+    console.error('List users error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to list users',
+    });
+  }
+}
+
+interface CreateUserRequest {
+  email: string;
+  password: string;
+  role?: 'ADMIN' | 'CLIENT';
+}
+
+/**
+ * POST /users
+ * Create a new user for the authenticated tenant (admin only)
+ */
+export async function createTenantUser(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const isAdmin = await tenantService.isUserAdmin(req.user.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Only admins can create users',
+      });
+      return;
+    }
+
+    const { email, password, role } = req.body as CreateUserRequest;
+
+    if (!email || !password) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Email and password are required',
+      });
+      return;
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid email format',
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Password must be at least 6 characters',
+      });
+      return;
+    }
+
+    const normalizedRole = role ?? 'CLIENT';
+    if (!ROLE_VALUES.has(normalizedRole)) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Role must be ADMIN or CLIENT',
+      });
+      return;
+    }
+
+    const user = await createUserForTenant({
+      email,
+      password,
+      tenantId: req.user.tenantId,
+      role: normalizedRole,
+    });
+
+    res.status(201).json({
+      message: 'User created successfully',
+      data: user,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'User already exists') {
+      res.status(409).json({
+        error: 'Conflict',
+        message: 'Email already registered',
+      });
+      return;
+    }
+
+    console.error('Create user error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to create user',
+    });
+  }
+}
+
+interface UpdateUserRequest {
+  email?: string;
+  role?: 'ADMIN' | 'CLIENT';
+}
+
+/**
+ * PATCH /users/:id
+ * Update a user for the authenticated tenant (admin only)
+ */
+export async function updateTenantUser(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const isAdmin = await tenantService.isUserAdmin(req.user.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Only admins can update users',
+      });
+      return;
+    }
+
+    const { id } = req.params;
+    const { email, role } = req.body as UpdateUserRequest;
+
+    if (email && !EMAIL_REGEX.test(email)) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid email format',
+      });
+      return;
+    }
+
+    if (role && !ROLE_VALUES.has(role)) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Role must be ADMIN or CLIENT',
+      });
+      return;
+    }
+
+    const updatedUser = await updateUserForTenant(id, req.user.tenantId, {
+      email,
+      role,
+    });
+
+    res.status(200).json({
+      message: 'User updated successfully',
+      data: updatedUser,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'User not found') {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'User not found',
+      });
+      return;
+    }
+
+    if (error instanceof Error && error.message === 'User already exists') {
+      res.status(409).json({
+        error: 'Conflict',
+        message: 'Email already registered',
+      });
+      return;
+    }
+
+    console.error('Update user error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to update user',
+    });
+  }
+}
+
+/**
+ * DELETE /users/:id
+ * Delete a user for the authenticated tenant (admin only)
+ */
+export async function deleteTenantUser(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const isAdmin = await tenantService.isUserAdmin(req.user.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Only admins can delete users',
+      });
+      return;
+    }
+
+    const { id } = req.params;
+    if (id === req.user.userId) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'You cannot delete your own user',
+      });
+      return;
+    }
+
+    await deleteUserForTenant(id, req.user.tenantId);
+
+    res.status(200).json({
+      message: 'User deleted successfully',
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'User not found') {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'User not found',
+      });
+      return;
+    }
+
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to delete user',
     });
   }
 }
