@@ -15,6 +15,11 @@ import {
   getCameraStreams,
   proxyStream,
   proxyJsmpegStream,
+  listAllCamerasAdmin,
+  createCameraAdmin,
+  updateCameraAdmin,
+  deleteCameraAdmin,
+  listTenantsAdmin,
 } from './controller.js';
 
 export const cameraRouter = Router();
@@ -116,6 +121,9 @@ export const cameraRouter = Router();
  */
 cameraRouter.post('/', authMiddleware, createCamera);
 cameraRouter.get('/', authMiddleware, listCameras);
+cameraRouter.get('/admin', authMiddleware, listAllCamerasAdmin);
+cameraRouter.post('/admin', authMiddleware, createCameraAdmin);
+cameraRouter.get('/admin/tenants', authMiddleware, listTenantsAdmin);
 
 /**
  * @swagger
@@ -322,6 +330,8 @@ cameraRouter.get('/streams', authMiddleware, getCameraStreams);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
+cameraRouter.patch('/admin/:id', authMiddleware, updateCameraAdmin);
+cameraRouter.delete('/admin/:id', authMiddleware, deleteCameraAdmin);
 cameraRouter.get('/:id', authMiddleware, getCamera);
 cameraRouter.put('/:id', authMiddleware, updateCamera);
 cameraRouter.patch('/:id', authMiddleware, updateCamera);

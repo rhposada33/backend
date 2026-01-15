@@ -27,6 +27,8 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../../auth/middleware.js';
 import * as cameraService from './service.js';
+import * as tenantService from '../tenant/service.js';
+import { prisma } from '../../db/client.js';
 import * as proxyService from './proxy.js';
 
 /**
@@ -141,6 +143,430 @@ export async function createCamera(
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to create camera',
+    });
+  }
+}
+
+/**
+ * GET /cameras/admin
+ * List all cameras across tenants (admin only)
+ */
+export async function listAllCamerasAdmin(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const isAdmin = await tenantService.isUserAdmin(req.user.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Only admins can list all cameras',
+      });
+      return;
+    }
+
+    const page = req.query.page ? parseInt(req.query.page as string) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+
+    if (page < 1 || limit < 1 || limit > 500) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'page must be >= 1, limit must be between 1 and 500',
+      });
+      return;
+    }
+
+    const skip = (page - 1) * limit;
+    const result = await cameraService.getAllCameras(skip, limit);
+
+    res.status(200).json({
+      data: result.cameras,
+      pagination: {
+        page,
+        limit,
+        total: result.total,
+        totalPages: Math.ceil(result.total / limit),
+      },
+    });
+  } catch (error) {
+    console.error('List all cameras error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to list cameras',
+    });
+  }
+}
+
+/**
+ * GET /cameras/admin/tenants
+ * List tenants for admin camera management (admin only)
+ */
+export async function listTenantsAdmin(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const isAdmin = await tenantService.isUserAdmin(req.user.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Only admins can list tenants',
+      });
+      return;
+    }
+
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 200;
+    if (limit < 1 || limit > 500) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'limit must be between 1 and 500',
+      });
+      return;
+    }
+
+    const tenants = await prisma.tenant.findMany({
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, name: true },
+    });
+
+    res.status(200).json({
+      data: tenants,
+    });
+  } catch (error) {
+    console.error('List tenants admin error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to list tenants',
+    });
+  }
+}
+
+/**
+ * POST /cameras/admin
+ * Create a camera for any tenant (admin only)
+ */
+export async function createCameraAdmin(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    const { tenantId, key, label, isEnabled, ip, port, username, password } = req.body;
+
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const isAdmin = await tenantService.isUserAdmin(req.user.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Only admins can create cameras',
+      });
+      return;
+    }
+
+    if (!tenantId || typeof tenantId !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'tenantId is required',
+      });
+      return;
+    }
+
+    if (!key || typeof key !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Camera key is required and must be a string',
+      });
+      return;
+    }
+
+    if (label !== undefined && typeof label !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Label must be a string',
+      });
+      return;
+    }
+
+    if (isEnabled !== undefined && typeof isEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'isEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (ip !== undefined && typeof ip !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'ip must be a string',
+      });
+      return;
+    }
+
+    if (port !== undefined && (typeof port !== 'number' || Number.isNaN(port))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'port must be a number',
+      });
+      return;
+    }
+
+    if (username !== undefined && typeof username !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'username must be a string',
+      });
+      return;
+    }
+
+    if (password !== undefined && typeof password !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'password must be a string',
+      });
+      return;
+    }
+
+    const camera = await cameraService.createCamera(tenantId, {
+      frigateCameraKey: key,
+      label,
+      ip,
+      port,
+      username,
+      password,
+    });
+
+    const updated = isEnabled === undefined
+      ? await cameraService.getCameraByIdAdmin(camera.id)
+      : await cameraService.updateCameraById(camera.id, { isEnabled });
+
+    res.status(201).json({
+      data: updated,
+    });
+  } catch (error) {
+    console.error('Create camera admin error:', error);
+
+    if (error instanceof Error && error.message.includes('already exists')) {
+      res.status(409).json({
+        error: 'Conflict',
+        message: error.message,
+      });
+      return;
+    }
+
+    if (error instanceof Error && error.message.includes('required')) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: error.message,
+      });
+      return;
+    }
+
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to create camera',
+    });
+  }
+}
+
+/**
+ * PATCH /cameras/admin/:id
+ * Update a camera by ID across tenants (admin only)
+ */
+export async function updateCameraAdmin(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const isAdmin = await tenantService.isUserAdmin(req.user.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Only admins can update cameras',
+      });
+      return;
+    }
+
+    const { id } = req.params;
+    const { key, label, isEnabled, ip, port, username, password } = req.body;
+
+    if (key === undefined && label === undefined && isEnabled === undefined && ip === undefined && port === undefined && username === undefined && password === undefined) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'At least one field must be provided',
+      });
+      return;
+    }
+
+    if (key !== undefined && typeof key !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'key must be a string',
+      });
+      return;
+    }
+
+    if (label !== undefined && typeof label !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'label must be a string',
+      });
+      return;
+    }
+
+    if (isEnabled !== undefined && typeof isEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'isEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (ip !== undefined && typeof ip !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'ip must be a string',
+      });
+      return;
+    }
+
+    if (port !== undefined && (typeof port !== 'number' || Number.isNaN(port))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'port must be a number',
+      });
+      return;
+    }
+
+    if (username !== undefined && typeof username !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'username must be a string',
+      });
+      return;
+    }
+
+    if (password !== undefined && typeof password !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'password must be a string',
+      });
+      return;
+    }
+
+    const camera = await cameraService.updateCameraById(id, {
+      frigateCameraKey: key,
+      label,
+      isEnabled,
+      ip,
+      port,
+      username,
+      password,
+    });
+
+    res.status(200).json({
+      data: camera,
+    });
+  } catch (error) {
+    console.error('Update camera admin error:', error);
+
+    if (error instanceof Error && error.message.includes('not found')) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: error.message,
+      });
+      return;
+    }
+
+    if (error instanceof Error && error.message.includes('already exists')) {
+      res.status(409).json({
+        error: 'Conflict',
+        message: error.message,
+      });
+      return;
+    }
+
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to update camera',
+    });
+  }
+}
+
+/**
+ * DELETE /cameras/admin/:id
+ * Delete a camera by ID across tenants (admin only)
+ */
+export async function deleteCameraAdmin(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const isAdmin = await tenantService.isUserAdmin(req.user.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Only admins can delete cameras',
+      });
+      return;
+    }
+
+    const { id } = req.params;
+    await cameraService.deleteCameraById(id);
+    res.status(204).send();
+  } catch (error) {
+    console.error('Delete camera admin error:', error);
+
+    if (error instanceof Error && error.message.includes('not found')) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: error.message,
+      });
+      return;
+    }
+
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to delete camera',
     });
   }
 }

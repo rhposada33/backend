@@ -51,6 +51,7 @@ export interface UpdateCameraInput {
 export interface CameraResponse {
   id: string;
   tenantId: string;
+  tenantName?: string;
   frigateCameraKey: string;
   label?: string | null;
   ip?: string | null;
@@ -59,6 +60,10 @@ export interface CameraResponse {
   password?: string | null;
   isEnabled: boolean;
   createdAt: Date;
+}
+
+export interface AdminCameraResponse extends CameraResponse {
+  tenantName: string;
 }
 
 /**
@@ -189,6 +194,156 @@ export async function getCamerasByTenant(
     cameras: cameraResponses,
     total,
   };
+}
+
+/**
+ * Get all cameras across tenants (admin use)
+ */
+export async function getAllCameras(
+  skip: number = 0,
+  take: number = 100
+): Promise<{ cameras: AdminCameraResponse[]; total: number }> {
+  const [cameras, total] = await Promise.all([
+    prisma.camera.findMany({
+      skip,
+      take,
+      include: {
+        tenant: {
+          select: { name: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.camera.count(),
+  ]);
+
+  return {
+    cameras: cameras.map((camera) => ({
+      id: camera.id,
+      tenantId: camera.tenantId,
+      tenantName: camera.tenant.name,
+      frigateCameraKey: camera.frigateCameraKey,
+      label: camera.label || undefined,
+      ip: camera.ip || undefined,
+      port: camera.port ?? undefined,
+      username: camera.username || undefined,
+      password: camera.password || undefined,
+      isEnabled: camera.isEnabled,
+      createdAt: camera.createdAt,
+    })),
+    total,
+  };
+}
+
+/**
+ * Update a camera by ID (admin use)
+ */
+export async function updateCameraById(
+  cameraId: string,
+  input: UpdateCameraInput
+): Promise<AdminCameraResponse> {
+  const camera = await prisma.camera.findUnique({
+    where: { id: cameraId },
+    include: {
+      tenant: { select: { name: true } },
+    },
+  });
+
+  if (!camera) {
+    throw new Error('Camera not found');
+  }
+
+  const dataToUpdate: any = {};
+  if (input.frigateCameraKey !== undefined) {
+    dataToUpdate.frigateCameraKey = input.frigateCameraKey.trim();
+  }
+  if (input.label !== undefined) {
+    dataToUpdate.label = input.label ? input.label.trim() : null;
+  }
+  if (input.ip !== undefined) {
+    dataToUpdate.ip = input.ip ? input.ip.trim() : null;
+  }
+  if (input.port !== undefined) {
+    dataToUpdate.port = input.port;
+  }
+  if (input.username !== undefined) {
+    dataToUpdate.username = input.username ? input.username.trim() : null;
+  }
+  if (input.password !== undefined) {
+    dataToUpdate.password = input.password;
+  }
+  if (input.isEnabled !== undefined) {
+    dataToUpdate.isEnabled = input.isEnabled;
+  }
+
+  const updated = await prisma.camera.update({
+    where: { id: cameraId },
+    data: dataToUpdate,
+    include: {
+      tenant: { select: { name: true } },
+    },
+  });
+
+  return {
+    id: updated.id,
+    tenantId: updated.tenantId,
+    tenantName: updated.tenant.name,
+    frigateCameraKey: updated.frigateCameraKey,
+    label: updated.label || undefined,
+    ip: updated.ip || undefined,
+    port: updated.port ?? undefined,
+    username: updated.username || undefined,
+    password: updated.password || undefined,
+    isEnabled: updated.isEnabled,
+    createdAt: updated.createdAt,
+  };
+}
+
+/**
+ * Get a camera by ID with tenant (admin use)
+ */
+export async function getCameraByIdAdmin(cameraId: string): Promise<AdminCameraResponse> {
+  const camera = await prisma.camera.findUnique({
+    where: { id: cameraId },
+    include: {
+      tenant: { select: { name: true } },
+    },
+  });
+
+  if (!camera) {
+    throw new Error('Camera not found');
+  }
+
+  return {
+    id: camera.id,
+    tenantId: camera.tenantId,
+    tenantName: camera.tenant.name,
+    frigateCameraKey: camera.frigateCameraKey,
+    label: camera.label || undefined,
+    ip: camera.ip || undefined,
+    port: camera.port ?? undefined,
+    username: camera.username || undefined,
+    password: camera.password || undefined,
+    isEnabled: camera.isEnabled,
+    createdAt: camera.createdAt,
+  };
+}
+
+/**
+ * Delete a camera by ID (admin use)
+ */
+export async function deleteCameraById(cameraId: string): Promise<void> {
+  const camera = await prisma.camera.findUnique({
+    where: { id: cameraId },
+  });
+
+  if (!camera) {
+    throw new Error('Camera not found');
+  }
+
+  await prisma.camera.delete({
+    where: { id: cameraId },
+  });
 }
 
 /**
