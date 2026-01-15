@@ -5,7 +5,7 @@
 
 import { Router } from 'express';
 import { authMiddleware } from '../../auth/middleware.js';
-import { getTenant, listTenants, createTenant } from './controller.js';
+import { getTenant, listTenants, createTenant, listTenantsAdmin, updateTenantAdmin, deleteTenantAdmin } from './controller.js';
 
 export const tenantRouter = Router();
 
@@ -47,8 +47,6 @@ export const tenantRouter = Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-tenantRouter.get('/:id', getTenant);
-
 /**
  * @swagger
  * /tenants:
@@ -142,6 +140,11 @@ tenantRouter.get('/:id', getTenant);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
+tenantRouter.get('/admin', authMiddleware, listTenantsAdmin);
+tenantRouter.patch('/admin/:id', authMiddleware, updateTenantAdmin);
+tenantRouter.delete('/admin/:id', authMiddleware, deleteTenantAdmin);
+tenantRouter.get('/:id', getTenant);
+
 tenantRouter.post('/', authMiddleware, createTenant);
 
 export default tenantRouter;
