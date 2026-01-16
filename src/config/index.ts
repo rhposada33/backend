@@ -19,6 +19,7 @@ interface Config {
   frigateMediaPath?: string;
   frigateUsername?: string;
   frigatePassword?: string;
+  frigateConfigPath?: string;
   // TODO: Add database configuration
   // TODO: Add additional config properties as needed
 }
@@ -33,6 +34,7 @@ function getConfig(): Config {
   const frigateMediaPath = process.env.FRIGATE_MEDIA_PATH;
   const frigateUsername = process.env.FRIGATE_USERNAME;
   const frigatePassword = process.env.FRIGATE_PASSWORD;
+  const frigateConfigPath = process.env.FRIGATE_CONFIG_PATH;
   
   return {
     port: parseInt(process.env.PORT || '3000', 10),
@@ -51,6 +53,7 @@ function getConfig(): Config {
     frigateMediaPath,
     frigateUsername,
     frigatePassword,
+    frigateConfigPath,
     // TODO: Initialize database configuration from environment
     // TODO: Add additional configuration properties
   };

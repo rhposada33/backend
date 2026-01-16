@@ -15,6 +15,7 @@ import { streamsRouter } from '../modules/streams/index.js';
 import { eventRouter } from '../modules/event/index.js';
 import { alarmRouter } from '../modules/alarm/index.js';
 import { exploreRouter } from '../modules/explore/index.js';
+import { facesRouter } from '../modules/faces/index.js';
 
 export const apiRouter = Router();
 
@@ -60,6 +61,7 @@ apiRouter.use('/streams', streamsRouter);
 apiRouter.use('/events', eventRouter);
 apiRouter.use('/alarms', alarmRouter);
 apiRouter.use('/explore', exploreRouter);
+apiRouter.use('/faces', facesRouter);
 
 // Catch-all 404 handler for undefined routes
 // Must be after all other route definitions

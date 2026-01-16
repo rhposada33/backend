@@ -49,6 +49,8 @@ model Camera {
   tenant             Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   frigateCameraKey   String // Frigate camera name/identifier
   label              String?
+  inputUrl           String?
+  isTestFeed         Boolean @default(false)
   ip                 String?
   port               Int?
   username           String?

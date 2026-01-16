@@ -119,13 +119,15 @@ export async function getFrigateAuthToken(): Promise<string | null> {
     const req = requestFn(url, options, (res) => {
       const setCookie = res.headers['set-cookie'];
       if (!setCookie || setCookie.length === 0) {
-        reject(new Error('Frigate login did not return a token'));
+        console.warn('Frigate login did not return a cookie');
+        resolve(null);
         return;
       }
 
       const tokenCookie = setCookie.find((cookie) => cookie.startsWith('frigate_token='));
       if (!tokenCookie) {
-        reject(new Error('Frigate token cookie not found'));
+        console.warn('Frigate token cookie not found');
+        resolve(null);
         return;
       }
 

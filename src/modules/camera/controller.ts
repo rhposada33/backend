@@ -29,6 +29,7 @@ import { AuthenticatedRequest } from '../../auth/middleware.js';
 import * as cameraService from './service.js';
 import * as tenantService from '../tenant/service.js';
 import { prisma } from '../../db/client.js';
+import { regenerateFrigateConfig } from '../frigateConfig/service.js';
 import * as proxyService from './proxy.js';
 
 /**
@@ -40,7 +41,7 @@ export async function createCamera(
   res: Response
 ): Promise<void> {
   try {
-    const { key, label, isEnabled, ip, port, username, password } = req.body;
+    const { key, label, isEnabled, inputUrl, isTestFeed, ip, port, username, password } = req.body;
 
     // Verify authenticated
     if (!req.user) {
@@ -72,6 +73,22 @@ export async function createCamera(
       res.status(400).json({
         error: 'Bad Request',
         message: 'isEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (inputUrl !== undefined && typeof inputUrl !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'inputUrl must be a string',
+      });
+      return;
+    }
+
+    if (isTestFeed !== undefined && typeof isTestFeed !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'isTestFeed must be a boolean',
       });
       return;
     }
@@ -111,6 +128,8 @@ export async function createCamera(
     const camera = await cameraService.createCamera(req.user.tenantId, {
       frigateCameraKey: key,
       label,
+      inputUrl,
+      isTestFeed,
       ip,
       port,
       username,
@@ -267,7 +286,7 @@ export async function createCameraAdmin(
   res: Response
 ): Promise<void> {
   try {
-    const { tenantId, key, label, isEnabled, ip, port, username, password } = req.body;
+    const { tenantId, key, label, isEnabled, inputUrl, isTestFeed, ip, port, username, password } = req.body;
 
     if (!req.user) {
       res.status(401).json({
@@ -318,6 +337,22 @@ export async function createCameraAdmin(
       return;
     }
 
+    if (inputUrl !== undefined && typeof inputUrl !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'inputUrl must be a string',
+      });
+      return;
+    }
+
+    if (isTestFeed !== undefined && typeof isTestFeed !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'isTestFeed must be a boolean',
+      });
+      return;
+    }
+
     if (ip !== undefined && typeof ip !== 'string') {
       res.status(400).json({
         error: 'Bad Request',
@@ -353,6 +388,8 @@ export async function createCameraAdmin(
     const camera = await cameraService.createCamera(tenantId, {
       frigateCameraKey: key,
       label,
+      inputUrl,
+      isTestFeed,
       ip,
       port,
       username,
@@ -419,9 +456,9 @@ export async function updateCameraAdmin(
     }
 
     const { id } = req.params;
-    const { key, label, isEnabled, ip, port, username, password } = req.body;
+    const { key, label, isEnabled, inputUrl, isTestFeed, ip, port, username, password } = req.body;
 
-    if (key === undefined && label === undefined && isEnabled === undefined && ip === undefined && port === undefined && username === undefined && password === undefined) {
+    if (key === undefined && label === undefined && isEnabled === undefined && inputUrl === undefined && isTestFeed === undefined && ip === undefined && port === undefined && username === undefined && password === undefined) {
       res.status(400).json({
         error: 'Bad Request',
         message: 'At least one field must be provided',
@@ -449,6 +486,22 @@ export async function updateCameraAdmin(
       res.status(400).json({
         error: 'Bad Request',
         message: 'isEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (inputUrl !== undefined && typeof inputUrl !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'inputUrl must be a string',
+      });
+      return;
+    }
+
+    if (isTestFeed !== undefined && typeof isTestFeed !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'isTestFeed must be a boolean',
       });
       return;
     }
@@ -489,6 +542,8 @@ export async function updateCameraAdmin(
       frigateCameraKey: key,
       label,
       isEnabled,
+      inputUrl,
+      isTestFeed,
       ip,
       port,
       username,
@@ -567,6 +622,47 @@ export async function deleteCameraAdmin(
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to delete camera',
+    });
+  }
+}
+
+/**
+ * POST /cameras/admin/sync-frigate
+ * Regenerate Frigate config cameras block from DB (admin only)
+ */
+export async function syncFrigateConfig(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const isAdmin = await tenantService.isUserAdmin(req.user.userId);
+    if (!isAdmin) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Only admins can sync Frigate config',
+      });
+      return;
+    }
+
+    const result = await regenerateFrigateConfig();
+
+    res.status(200).json({
+      message: 'Frigate config updated',
+      data: result,
+    });
+  } catch (error) {
+    console.error('Sync Frigate config error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'Failed to update config',
     });
   }
 }
@@ -757,6 +853,8 @@ export async function updateCamera(
       frigateCameraKey: key,
       label,
       isEnabled,
+      inputUrl,
+      isTestFeed,
       ip,
       port,
       username,

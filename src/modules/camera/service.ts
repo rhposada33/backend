@@ -32,6 +32,8 @@ import { config } from '../../config/index.js';
 export interface CreateCameraInput {
   frigateCameraKey: string; // Frigate camera name - must be unique per tenant and match Frigate config
   label?: string; // Human-readable display name for UI
+  inputUrl?: string;
+  isTestFeed?: boolean;
   ip?: string;
   port?: number;
   username?: string;
@@ -42,6 +44,8 @@ export interface UpdateCameraInput {
   frigateCameraKey?: string;
   label?: string;
   isEnabled?: boolean;
+  inputUrl?: string | null;
+  isTestFeed?: boolean;
   ip?: string | null;
   port?: number | null;
   username?: string | null;
@@ -54,6 +58,8 @@ export interface CameraResponse {
   tenantName?: string;
   frigateCameraKey: string;
   label?: string | null;
+  inputUrl?: string | null;
+  isTestFeed: boolean;
   ip?: string | null;
   port?: number | null;
   username?: string | null;
@@ -100,6 +106,8 @@ export async function createCamera(
       tenantId,
       frigateCameraKey: trimmedKey,
       label: input.label?.trim() || null,
+      inputUrl: input.inputUrl?.trim() || null,
+      isTestFeed: input.isTestFeed ?? false,
       ip: input.ip?.trim() || null,
       port: input.port ?? null,
       username: input.username?.trim() || null,
@@ -113,6 +121,8 @@ export async function createCamera(
     tenantId: camera.tenantId,
     frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    inputUrl: camera.inputUrl || undefined,
+    isTestFeed: camera.isTestFeed,
     ip: camera.ip || undefined,
     port: camera.port ?? undefined,
     username: camera.username || undefined,
@@ -145,6 +155,8 @@ export async function getCameraById(
     tenantId: camera.tenantId,
     frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    inputUrl: camera.inputUrl || undefined,
+    isTestFeed: camera.isTestFeed,
     ip: camera.ip || undefined,
     port: camera.port ?? undefined,
     username: camera.username || undefined,
@@ -181,6 +193,8 @@ export async function getCamerasByTenant(
       tenantId: camera.tenantId,
       frigateCameraKey: camera.frigateCameraKey,
       label: camera.label || undefined,
+      inputUrl: camera.inputUrl || undefined,
+      isTestFeed: camera.isTestFeed,
       ip: camera.ip || undefined,
       port: camera.port ?? undefined,
       username: camera.username || undefined,
@@ -224,6 +238,8 @@ export async function getAllCameras(
       tenantName: camera.tenant.name,
       frigateCameraKey: camera.frigateCameraKey,
       label: camera.label || undefined,
+      inputUrl: camera.inputUrl || undefined,
+      isTestFeed: camera.isTestFeed,
       ip: camera.ip || undefined,
       port: camera.port ?? undefined,
       username: camera.username || undefined,
@@ -260,6 +276,12 @@ export async function updateCameraById(
   if (input.label !== undefined) {
     dataToUpdate.label = input.label ? input.label.trim() : null;
   }
+  if (input.inputUrl !== undefined) {
+    dataToUpdate.inputUrl = input.inputUrl ? input.inputUrl.trim() : null;
+  }
+  if (input.isTestFeed !== undefined) {
+    dataToUpdate.isTestFeed = input.isTestFeed;
+  }
   if (input.ip !== undefined) {
     dataToUpdate.ip = input.ip ? input.ip.trim() : null;
   }
@@ -290,6 +312,8 @@ export async function updateCameraById(
     tenantName: updated.tenant.name,
     frigateCameraKey: updated.frigateCameraKey,
     label: updated.label || undefined,
+    inputUrl: updated.inputUrl || undefined,
+    isTestFeed: updated.isTestFeed,
     ip: updated.ip || undefined,
     port: updated.port ?? undefined,
     username: updated.username || undefined,
@@ -320,6 +344,8 @@ export async function getCameraByIdAdmin(cameraId: string): Promise<AdminCameraR
     tenantName: camera.tenant.name,
     frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    inputUrl: camera.inputUrl || undefined,
+    isTestFeed: camera.isTestFeed,
     ip: camera.ip || undefined,
     port: camera.port ?? undefined,
     username: camera.username || undefined,
@@ -399,6 +425,8 @@ export async function updateCamera(
       tenantId: updated.tenantId,
       frigateCameraKey: updated.frigateCameraKey,
       label: updated.label || undefined,
+      inputUrl: updated.inputUrl || undefined,
+      isTestFeed: updated.isTestFeed,
       ip: updated.ip || undefined,
       port: updated.port ?? undefined,
       username: updated.username || undefined,
@@ -412,6 +440,14 @@ export async function updateCamera(
   const dataToUpdate: any = {};
   if (input.label !== undefined) {
     dataToUpdate.label = input.label.trim() || null;
+  }
+
+  if (input.inputUrl !== undefined) {
+    dataToUpdate.inputUrl = input.inputUrl ? input.inputUrl.trim() : null;
+  }
+
+  if (input.isTestFeed !== undefined) {
+    dataToUpdate.isTestFeed = input.isTestFeed;
   }
 
   if (input.ip !== undefined) {
@@ -442,11 +478,13 @@ export async function updateCamera(
 
     return {
       id: updated.id,
-      tenantId: updated.tenantId,
-      frigateCameraKey: updated.frigateCameraKey,
-      label: updated.label || undefined,
-      ip: updated.ip || undefined,
-      port: updated.port ?? undefined,
+    tenantId: updated.tenantId,
+    frigateCameraKey: updated.frigateCameraKey,
+    label: updated.label || undefined,
+    inputUrl: updated.inputUrl || undefined,
+    isTestFeed: updated.isTestFeed,
+    ip: updated.ip || undefined,
+    port: updated.port ?? undefined,
       username: updated.username || undefined,
       password: updated.password || undefined,
       isEnabled: updated.isEnabled,
@@ -460,6 +498,8 @@ export async function updateCamera(
     tenantId: camera.tenantId,
     frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    inputUrl: camera.inputUrl || undefined,
+    isTestFeed: camera.isTestFeed,
     ip: camera.ip || undefined,
     port: camera.port ?? undefined,
     username: camera.username || undefined,
@@ -519,6 +559,8 @@ export async function getCameraByKey(
     tenantId: camera.tenantId,
     frigateCameraKey: camera.frigateCameraKey,
     label: camera.label || undefined,
+    inputUrl: camera.inputUrl || undefined,
+    isTestFeed: camera.isTestFeed,
     ip: camera.ip || undefined,
     port: camera.port ?? undefined,
     username: camera.username || undefined,

@@ -1,0 +1,2 @@
+ALTER TABLE "cameras" ADD COLUMN "inputUrl" TEXT;
+ALTER TABLE "cameras" ADD COLUMN "isTestFeed" BOOLEAN NOT NULL DEFAULT false;
