@@ -1,0 +1,12 @@
+ALTER TABLE "cameras" ADD COLUMN "inputArgs" TEXT;
+ALTER TABLE "cameras" ADD COLUMN "roles" TEXT;
+ALTER TABLE "cameras" ADD COLUMN "recordEnabled" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "cameras" ADD COLUMN "snapshotsEnabled" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "cameras" ADD COLUMN "snapshotsRetainDays" INTEGER NOT NULL DEFAULT 10;
+ALTER TABLE "cameras" ADD COLUMN "motionEnabled" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "cameras" ADD COLUMN "detectWidth" INTEGER NOT NULL DEFAULT 320;
+ALTER TABLE "cameras" ADD COLUMN "detectHeight" INTEGER NOT NULL DEFAULT 180;
+ALTER TABLE "cameras" ADD COLUMN "detectFps" INTEGER NOT NULL DEFAULT 5;
+ALTER TABLE "cameras" ADD COLUMN "zoneName" TEXT NOT NULL DEFAULT 'face';
+ALTER TABLE "cameras" ADD COLUMN "zoneCoordinates" TEXT;
+ALTER TABLE "cameras" ADD COLUMN "reviewRequiredZones" TEXT;

@@ -51,6 +51,19 @@ model Camera {
   label              String?
   inputUrl           String?
   isTestFeed         Boolean @default(false)
+  inputArgs          String?
+  roles              String?
+  recordEnabled      Boolean @default(true)
+  snapshotsEnabled   Boolean @default(true)
+  snapshotsRetainDays Int @default(10)
+  motionEnabled      Boolean @default(true)
+  detectWidth        Int @default(320)
+  detectHeight       Int @default(180)
+  detectFps          Int @default(5)
+  zoneName           String @default("face")
+  zoneCoordinates    String?
+  zoneObjects        String? @default("person,car,cat,dog")
+  reviewRequiredZones String?
   ip                 String?
   port               Int?
   username           String?

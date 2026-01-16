@@ -41,7 +41,30 @@ export async function createCamera(
   res: Response
 ): Promise<void> {
   try {
-    const { key, label, isEnabled, inputUrl, isTestFeed, ip, port, username, password } = req.body;
+    const {
+      key,
+      label,
+      isEnabled,
+      inputUrl,
+      isTestFeed,
+      ip,
+      port,
+      username,
+      password,
+      inputArgs,
+      roles,
+      recordEnabled,
+      snapshotsEnabled,
+      snapshotsRetainDays,
+      motionEnabled,
+      detectWidth,
+      detectHeight,
+      detectFps,
+      zoneName,
+      zoneCoordinates,
+      zoneObjects,
+      reviewRequiredZones,
+    } = req.body;
 
     // Verify authenticated
     if (!req.user) {
@@ -73,6 +96,22 @@ export async function createCamera(
       res.status(400).json({
         error: 'Bad Request',
         message: 'isEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (inputUrl !== undefined && typeof inputUrl !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'inputUrl must be a string',
+      });
+      return;
+    }
+
+    if (isTestFeed !== undefined && typeof isTestFeed !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'isTestFeed must be a boolean',
       });
       return;
     }
@@ -125,6 +164,113 @@ export async function createCamera(
       return;
     }
 
+    if (inputArgs !== undefined && typeof inputArgs !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'inputArgs must be a string',
+      });
+      return;
+    }
+
+    if (roles !== undefined && typeof roles !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'roles must be a string',
+      });
+      return;
+    }
+
+    if (recordEnabled !== undefined && typeof recordEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'recordEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (snapshotsEnabled !== undefined && typeof snapshotsEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'snapshotsEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (
+      snapshotsRetainDays !== undefined &&
+      (typeof snapshotsRetainDays !== 'number' || Number.isNaN(snapshotsRetainDays))
+    ) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'snapshotsRetainDays must be a number',
+      });
+      return;
+    }
+
+    if (motionEnabled !== undefined && typeof motionEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'motionEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (detectWidth !== undefined && (typeof detectWidth !== 'number' || Number.isNaN(detectWidth))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'detectWidth must be a number',
+      });
+      return;
+    }
+
+    if (detectHeight !== undefined && (typeof detectHeight !== 'number' || Number.isNaN(detectHeight))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'detectHeight must be a number',
+      });
+      return;
+    }
+
+    if (detectFps !== undefined && (typeof detectFps !== 'number' || Number.isNaN(detectFps))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'detectFps must be a number',
+      });
+      return;
+    }
+
+    if (zoneName !== undefined && typeof zoneName !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'zoneName must be a string',
+      });
+      return;
+    }
+
+    if (zoneCoordinates !== undefined && typeof zoneCoordinates !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'zoneCoordinates must be a string',
+      });
+      return;
+    }
+
+    if (zoneObjects !== undefined && typeof zoneObjects !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'zoneObjects must be a string',
+      });
+      return;
+    }
+
+    if (reviewRequiredZones !== undefined && typeof reviewRequiredZones !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'reviewRequiredZones must be a string',
+      });
+      return;
+    }
+
     const camera = await cameraService.createCamera(req.user.tenantId, {
       frigateCameraKey: key,
       label,
@@ -134,6 +280,19 @@ export async function createCamera(
       port,
       username,
       password,
+      inputArgs,
+      roles,
+      recordEnabled,
+      snapshotsEnabled,
+      snapshotsRetainDays,
+      motionEnabled,
+      detectWidth,
+      detectHeight,
+      detectFps,
+      zoneName,
+      zoneCoordinates,
+      zoneObjects,
+      reviewRequiredZones,
     });
 
     res.status(201).json({
@@ -286,7 +445,31 @@ export async function createCameraAdmin(
   res: Response
 ): Promise<void> {
   try {
-    const { tenantId, key, label, isEnabled, inputUrl, isTestFeed, ip, port, username, password } = req.body;
+    const {
+      tenantId,
+      key,
+      label,
+      isEnabled,
+      inputUrl,
+      isTestFeed,
+      ip,
+      port,
+      username,
+      password,
+      inputArgs,
+      roles,
+      recordEnabled,
+      snapshotsEnabled,
+      snapshotsRetainDays,
+      motionEnabled,
+      detectWidth,
+      detectHeight,
+      detectFps,
+      zoneName,
+      zoneCoordinates,
+      zoneObjects,
+      reviewRequiredZones,
+    } = req.body;
 
     if (!req.user) {
       res.status(401).json({
@@ -385,6 +568,113 @@ export async function createCameraAdmin(
       return;
     }
 
+    if (inputArgs !== undefined && typeof inputArgs !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'inputArgs must be a string',
+      });
+      return;
+    }
+
+    if (roles !== undefined && typeof roles !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'roles must be a string',
+      });
+      return;
+    }
+
+    if (recordEnabled !== undefined && typeof recordEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'recordEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (snapshotsEnabled !== undefined && typeof snapshotsEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'snapshotsEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (
+      snapshotsRetainDays !== undefined &&
+      (typeof snapshotsRetainDays !== 'number' || Number.isNaN(snapshotsRetainDays))
+    ) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'snapshotsRetainDays must be a number',
+      });
+      return;
+    }
+
+    if (motionEnabled !== undefined && typeof motionEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'motionEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (detectWidth !== undefined && (typeof detectWidth !== 'number' || Number.isNaN(detectWidth))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'detectWidth must be a number',
+      });
+      return;
+    }
+
+    if (detectHeight !== undefined && (typeof detectHeight !== 'number' || Number.isNaN(detectHeight))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'detectHeight must be a number',
+      });
+      return;
+    }
+
+    if (detectFps !== undefined && (typeof detectFps !== 'number' || Number.isNaN(detectFps))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'detectFps must be a number',
+      });
+      return;
+    }
+
+    if (zoneName !== undefined && typeof zoneName !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'zoneName must be a string',
+      });
+      return;
+    }
+
+    if (zoneCoordinates !== undefined && typeof zoneCoordinates !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'zoneCoordinates must be a string',
+      });
+      return;
+    }
+
+    if (zoneObjects !== undefined && typeof zoneObjects !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'zoneObjects must be a string',
+      });
+      return;
+    }
+
+    if (reviewRequiredZones !== undefined && typeof reviewRequiredZones !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'reviewRequiredZones must be a string',
+      });
+      return;
+    }
+
     const camera = await cameraService.createCamera(tenantId, {
       frigateCameraKey: key,
       label,
@@ -394,6 +684,19 @@ export async function createCameraAdmin(
       port,
       username,
       password,
+      inputArgs,
+      roles,
+      recordEnabled,
+      snapshotsEnabled,
+      snapshotsRetainDays,
+      motionEnabled,
+      detectWidth,
+      detectHeight,
+      detectFps,
+      zoneName,
+      zoneCoordinates,
+      zoneObjects,
+      reviewRequiredZones,
     });
 
     const updated = isEnabled === undefined
@@ -456,9 +759,55 @@ export async function updateCameraAdmin(
     }
 
     const { id } = req.params;
-    const { key, label, isEnabled, inputUrl, isTestFeed, ip, port, username, password } = req.body;
+    const {
+      key,
+      label,
+      isEnabled,
+      inputUrl,
+      isTestFeed,
+      ip,
+      port,
+      username,
+      password,
+      inputArgs,
+      roles,
+      recordEnabled,
+      snapshotsEnabled,
+      snapshotsRetainDays,
+      motionEnabled,
+      detectWidth,
+      detectHeight,
+      detectFps,
+      zoneName,
+      zoneCoordinates,
+      zoneObjects,
+      reviewRequiredZones,
+    } = req.body;
 
-    if (key === undefined && label === undefined && isEnabled === undefined && inputUrl === undefined && isTestFeed === undefined && ip === undefined && port === undefined && username === undefined && password === undefined) {
+    if (
+      key === undefined &&
+      label === undefined &&
+      isEnabled === undefined &&
+      inputUrl === undefined &&
+      isTestFeed === undefined &&
+      ip === undefined &&
+      port === undefined &&
+      username === undefined &&
+      password === undefined &&
+      inputArgs === undefined &&
+      roles === undefined &&
+      recordEnabled === undefined &&
+      snapshotsEnabled === undefined &&
+      snapshotsRetainDays === undefined &&
+      motionEnabled === undefined &&
+      detectWidth === undefined &&
+      detectHeight === undefined &&
+      detectFps === undefined &&
+      zoneName === undefined &&
+      zoneCoordinates === undefined &&
+      zoneObjects === undefined &&
+      reviewRequiredZones === undefined
+    ) {
       res.status(400).json({
         error: 'Bad Request',
         message: 'At least one field must be provided',
@@ -538,6 +887,113 @@ export async function updateCameraAdmin(
       return;
     }
 
+    if (inputArgs !== undefined && typeof inputArgs !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'inputArgs must be a string',
+      });
+      return;
+    }
+
+    if (roles !== undefined && typeof roles !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'roles must be a string',
+      });
+      return;
+    }
+
+    if (recordEnabled !== undefined && typeof recordEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'recordEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (snapshotsEnabled !== undefined && typeof snapshotsEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'snapshotsEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (
+      snapshotsRetainDays !== undefined &&
+      (typeof snapshotsRetainDays !== 'number' || Number.isNaN(snapshotsRetainDays))
+    ) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'snapshotsRetainDays must be a number',
+      });
+      return;
+    }
+
+    if (motionEnabled !== undefined && typeof motionEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'motionEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (detectWidth !== undefined && (typeof detectWidth !== 'number' || Number.isNaN(detectWidth))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'detectWidth must be a number',
+      });
+      return;
+    }
+
+    if (detectHeight !== undefined && (typeof detectHeight !== 'number' || Number.isNaN(detectHeight))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'detectHeight must be a number',
+      });
+      return;
+    }
+
+    if (detectFps !== undefined && (typeof detectFps !== 'number' || Number.isNaN(detectFps))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'detectFps must be a number',
+      });
+      return;
+    }
+
+    if (zoneName !== undefined && typeof zoneName !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'zoneName must be a string',
+      });
+      return;
+    }
+
+    if (zoneCoordinates !== undefined && typeof zoneCoordinates !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'zoneCoordinates must be a string',
+      });
+      return;
+    }
+
+    if (zoneObjects !== undefined && typeof zoneObjects !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'zoneObjects must be a string',
+      });
+      return;
+    }
+
+    if (reviewRequiredZones !== undefined && typeof reviewRequiredZones !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'reviewRequiredZones must be a string',
+      });
+      return;
+    }
+
     const camera = await cameraService.updateCameraById(id, {
       frigateCameraKey: key,
       label,
@@ -548,6 +1004,19 @@ export async function updateCameraAdmin(
       port,
       username,
       password,
+      inputArgs,
+      roles,
+      recordEnabled,
+      snapshotsEnabled,
+      snapshotsRetainDays,
+      motionEnabled,
+      detectWidth,
+      detectHeight,
+      detectFps,
+      zoneName,
+      zoneCoordinates,
+      zoneObjects,
+      reviewRequiredZones,
     });
 
     res.status(200).json({
@@ -781,10 +1250,56 @@ export async function updateCamera(
     }
 
     const { id } = req.params;
-    const { key, label, isEnabled, ip, port, username, password } = req.body;
+    const {
+      key,
+      label,
+      isEnabled,
+      inputUrl,
+      isTestFeed,
+      ip,
+      port,
+      username,
+      password,
+      inputArgs,
+      roles,
+      recordEnabled,
+      snapshotsEnabled,
+      snapshotsRetainDays,
+      motionEnabled,
+      detectWidth,
+      detectHeight,
+      detectFps,
+      zoneName,
+      zoneCoordinates,
+      zoneObjects,
+      reviewRequiredZones,
+    } = req.body;
 
     // Validate input - at least one field must be provided
-    if (key === undefined && label === undefined && isEnabled === undefined && ip === undefined && port === undefined && username === undefined && password === undefined) {
+    if (
+      key === undefined &&
+      label === undefined &&
+      isEnabled === undefined &&
+      inputUrl === undefined &&
+      isTestFeed === undefined &&
+      ip === undefined &&
+      port === undefined &&
+      username === undefined &&
+      password === undefined &&
+      inputArgs === undefined &&
+      roles === undefined &&
+      recordEnabled === undefined &&
+      snapshotsEnabled === undefined &&
+      snapshotsRetainDays === undefined &&
+      motionEnabled === undefined &&
+      detectWidth === undefined &&
+      detectHeight === undefined &&
+      detectFps === undefined &&
+      zoneName === undefined &&
+      zoneCoordinates === undefined &&
+      zoneObjects === undefined &&
+      reviewRequiredZones === undefined
+    ) {
       res.status(400).json({
         error: 'Bad Request',
         message: 'At least one field must be provided',
@@ -849,6 +1364,113 @@ export async function updateCamera(
       return;
     }
 
+    if (inputArgs !== undefined && typeof inputArgs !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'inputArgs must be a string',
+      });
+      return;
+    }
+
+    if (roles !== undefined && typeof roles !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'roles must be a string',
+      });
+      return;
+    }
+
+    if (recordEnabled !== undefined && typeof recordEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'recordEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (snapshotsEnabled !== undefined && typeof snapshotsEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'snapshotsEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (
+      snapshotsRetainDays !== undefined &&
+      (typeof snapshotsRetainDays !== 'number' || Number.isNaN(snapshotsRetainDays))
+    ) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'snapshotsRetainDays must be a number',
+      });
+      return;
+    }
+
+    if (motionEnabled !== undefined && typeof motionEnabled !== 'boolean') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'motionEnabled must be a boolean',
+      });
+      return;
+    }
+
+    if (detectWidth !== undefined && (typeof detectWidth !== 'number' || Number.isNaN(detectWidth))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'detectWidth must be a number',
+      });
+      return;
+    }
+
+    if (detectHeight !== undefined && (typeof detectHeight !== 'number' || Number.isNaN(detectHeight))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'detectHeight must be a number',
+      });
+      return;
+    }
+
+    if (detectFps !== undefined && (typeof detectFps !== 'number' || Number.isNaN(detectFps))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'detectFps must be a number',
+      });
+      return;
+    }
+
+    if (zoneName !== undefined && typeof zoneName !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'zoneName must be a string',
+      });
+      return;
+    }
+
+    if (zoneCoordinates !== undefined && typeof zoneCoordinates !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'zoneCoordinates must be a string',
+      });
+      return;
+    }
+
+    if (zoneObjects !== undefined && typeof zoneObjects !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'zoneObjects must be a string',
+      });
+      return;
+    }
+
+    if (reviewRequiredZones !== undefined && typeof reviewRequiredZones !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'reviewRequiredZones must be a string',
+      });
+      return;
+    }
+
     const camera = await cameraService.updateCamera(req.user.tenantId, id, {
       frigateCameraKey: key,
       label,
@@ -859,6 +1481,19 @@ export async function updateCamera(
       port,
       username,
       password,
+      inputArgs,
+      roles,
+      recordEnabled,
+      snapshotsEnabled,
+      snapshotsRetainDays,
+      motionEnabled,
+      detectWidth,
+      detectHeight,
+      detectFps,
+      zoneName,
+      zoneCoordinates,
+      zoneObjects,
+      reviewRequiredZones,
     });
 
     res.status(200).json({

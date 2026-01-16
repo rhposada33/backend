@@ -34,6 +34,19 @@ export interface CreateCameraInput {
   label?: string; // Human-readable display name for UI
   inputUrl?: string;
   isTestFeed?: boolean;
+  inputArgs?: string;
+  roles?: string;
+  recordEnabled?: boolean;
+  snapshotsEnabled?: boolean;
+  snapshotsRetainDays?: number;
+  motionEnabled?: boolean;
+  detectWidth?: number;
+  detectHeight?: number;
+  detectFps?: number;
+  zoneName?: string;
+  zoneCoordinates?: string;
+  zoneObjects?: string;
+  reviewRequiredZones?: string;
   ip?: string;
   port?: number;
   username?: string;
@@ -46,6 +59,19 @@ export interface UpdateCameraInput {
   isEnabled?: boolean;
   inputUrl?: string | null;
   isTestFeed?: boolean;
+  inputArgs?: string | null;
+  roles?: string | null;
+  recordEnabled?: boolean;
+  snapshotsEnabled?: boolean;
+  snapshotsRetainDays?: number | null;
+  motionEnabled?: boolean;
+  detectWidth?: number | null;
+  detectHeight?: number | null;
+  detectFps?: number | null;
+  zoneName?: string | null;
+  zoneCoordinates?: string | null;
+  zoneObjects?: string | null;
+  reviewRequiredZones?: string | null;
   ip?: string | null;
   port?: number | null;
   username?: string | null;
@@ -60,6 +86,19 @@ export interface CameraResponse {
   label?: string | null;
   inputUrl?: string | null;
   isTestFeed: boolean;
+  inputArgs?: string | null;
+  roles?: string | null;
+  recordEnabled: boolean;
+  snapshotsEnabled: boolean;
+  snapshotsRetainDays: number;
+  motionEnabled: boolean;
+  detectWidth: number;
+  detectHeight: number;
+  detectFps: number;
+  zoneName: string;
+  zoneCoordinates?: string | null;
+  zoneObjects?: string | null;
+  reviewRequiredZones?: string | null;
   ip?: string | null;
   port?: number | null;
   username?: string | null;
@@ -108,6 +147,19 @@ export async function createCamera(
       label: input.label?.trim() || null,
       inputUrl: input.inputUrl?.trim() || null,
       isTestFeed: input.isTestFeed ?? false,
+      inputArgs: input.inputArgs?.trim() || null,
+      roles: input.roles?.trim() || null,
+      recordEnabled: input.recordEnabled ?? true,
+      snapshotsEnabled: input.snapshotsEnabled ?? true,
+      snapshotsRetainDays: input.snapshotsRetainDays ?? 10,
+      motionEnabled: input.motionEnabled ?? true,
+      detectWidth: input.detectWidth ?? 320,
+      detectHeight: input.detectHeight ?? 180,
+      detectFps: input.detectFps ?? 5,
+      zoneName: input.zoneName?.trim() || 'face',
+      zoneCoordinates: input.zoneCoordinates?.trim() || null,
+      zoneObjects: input.zoneObjects?.trim() || 'person,car,cat,dog',
+      reviewRequiredZones: input.reviewRequiredZones?.trim() || null,
       ip: input.ip?.trim() || null,
       port: input.port ?? null,
       username: input.username?.trim() || null,
@@ -123,6 +175,19 @@ export async function createCamera(
     label: camera.label || undefined,
     inputUrl: camera.inputUrl || undefined,
     isTestFeed: camera.isTestFeed,
+    inputArgs: camera.inputArgs || undefined,
+    roles: camera.roles || undefined,
+    recordEnabled: camera.recordEnabled,
+    snapshotsEnabled: camera.snapshotsEnabled,
+    snapshotsRetainDays: camera.snapshotsRetainDays,
+    motionEnabled: camera.motionEnabled,
+    detectWidth: camera.detectWidth,
+    detectHeight: camera.detectHeight,
+    detectFps: camera.detectFps,
+    zoneName: camera.zoneName,
+    zoneCoordinates: camera.zoneCoordinates || undefined,
+    zoneObjects: camera.zoneObjects || undefined,
+    reviewRequiredZones: camera.reviewRequiredZones || undefined,
     ip: camera.ip || undefined,
     port: camera.port ?? undefined,
     username: camera.username || undefined,
@@ -157,6 +222,19 @@ export async function getCameraById(
     label: camera.label || undefined,
     inputUrl: camera.inputUrl || undefined,
     isTestFeed: camera.isTestFeed,
+    inputArgs: camera.inputArgs || undefined,
+    roles: camera.roles || undefined,
+    recordEnabled: camera.recordEnabled,
+    snapshotsEnabled: camera.snapshotsEnabled,
+    snapshotsRetainDays: camera.snapshotsRetainDays,
+    motionEnabled: camera.motionEnabled,
+    detectWidth: camera.detectWidth,
+    detectHeight: camera.detectHeight,
+    detectFps: camera.detectFps,
+    zoneName: camera.zoneName,
+    zoneCoordinates: camera.zoneCoordinates || undefined,
+    zoneObjects: camera.zoneObjects || undefined,
+    reviewRequiredZones: camera.reviewRequiredZones || undefined,
     ip: camera.ip || undefined,
     port: camera.port ?? undefined,
     username: camera.username || undefined,
@@ -195,6 +273,19 @@ export async function getCamerasByTenant(
       label: camera.label || undefined,
       inputUrl: camera.inputUrl || undefined,
       isTestFeed: camera.isTestFeed,
+      inputArgs: camera.inputArgs || undefined,
+      roles: camera.roles || undefined,
+      recordEnabled: camera.recordEnabled,
+      snapshotsEnabled: camera.snapshotsEnabled,
+      snapshotsRetainDays: camera.snapshotsRetainDays,
+      motionEnabled: camera.motionEnabled,
+      detectWidth: camera.detectWidth,
+      detectHeight: camera.detectHeight,
+      detectFps: camera.detectFps,
+      zoneName: camera.zoneName,
+      zoneCoordinates: camera.zoneCoordinates || undefined,
+      zoneObjects: camera.zoneObjects || undefined,
+      reviewRequiredZones: camera.reviewRequiredZones || undefined,
       ip: camera.ip || undefined,
       port: camera.port ?? undefined,
       username: camera.username || undefined,
@@ -240,6 +331,19 @@ export async function getAllCameras(
       label: camera.label || undefined,
       inputUrl: camera.inputUrl || undefined,
       isTestFeed: camera.isTestFeed,
+      inputArgs: camera.inputArgs || undefined,
+      roles: camera.roles || undefined,
+      recordEnabled: camera.recordEnabled,
+      snapshotsEnabled: camera.snapshotsEnabled,
+      snapshotsRetainDays: camera.snapshotsRetainDays,
+      motionEnabled: camera.motionEnabled,
+      detectWidth: camera.detectWidth,
+      detectHeight: camera.detectHeight,
+      detectFps: camera.detectFps,
+      zoneName: camera.zoneName,
+      zoneCoordinates: camera.zoneCoordinates || undefined,
+      zoneObjects: camera.zoneObjects || undefined,
+      reviewRequiredZones: camera.reviewRequiredZones || undefined,
       ip: camera.ip || undefined,
       port: camera.port ?? undefined,
       username: camera.username || undefined,
@@ -282,6 +386,45 @@ export async function updateCameraById(
   if (input.isTestFeed !== undefined) {
     dataToUpdate.isTestFeed = input.isTestFeed;
   }
+  if (input.inputArgs !== undefined) {
+    dataToUpdate.inputArgs = input.inputArgs ? input.inputArgs.trim() : null;
+  }
+  if (input.roles !== undefined) {
+    dataToUpdate.roles = input.roles ? input.roles.trim() : null;
+  }
+  if (input.recordEnabled !== undefined) {
+    dataToUpdate.recordEnabled = input.recordEnabled;
+  }
+  if (input.snapshotsEnabled !== undefined) {
+    dataToUpdate.snapshotsEnabled = input.snapshotsEnabled;
+  }
+  if (input.snapshotsRetainDays !== undefined) {
+    dataToUpdate.snapshotsRetainDays = input.snapshotsRetainDays;
+  }
+  if (input.motionEnabled !== undefined) {
+    dataToUpdate.motionEnabled = input.motionEnabled;
+  }
+  if (input.detectWidth !== undefined) {
+    dataToUpdate.detectWidth = input.detectWidth;
+  }
+  if (input.detectHeight !== undefined) {
+    dataToUpdate.detectHeight = input.detectHeight;
+  }
+  if (input.detectFps !== undefined) {
+    dataToUpdate.detectFps = input.detectFps;
+  }
+  if (input.zoneName !== undefined) {
+    dataToUpdate.zoneName = input.zoneName ? input.zoneName.trim() : null;
+  }
+  if (input.zoneCoordinates !== undefined) {
+    dataToUpdate.zoneCoordinates = input.zoneCoordinates ? input.zoneCoordinates.trim() : null;
+  }
+  if (input.zoneObjects !== undefined) {
+    dataToUpdate.zoneObjects = input.zoneObjects ? input.zoneObjects.trim() : null;
+  }
+  if (input.reviewRequiredZones !== undefined) {
+    dataToUpdate.reviewRequiredZones = input.reviewRequiredZones ? input.reviewRequiredZones.trim() : null;
+  }
   if (input.ip !== undefined) {
     dataToUpdate.ip = input.ip ? input.ip.trim() : null;
   }
@@ -314,6 +457,19 @@ export async function updateCameraById(
     label: updated.label || undefined,
     inputUrl: updated.inputUrl || undefined,
     isTestFeed: updated.isTestFeed,
+    inputArgs: updated.inputArgs || undefined,
+    roles: updated.roles || undefined,
+    recordEnabled: updated.recordEnabled,
+    snapshotsEnabled: updated.snapshotsEnabled,
+    snapshotsRetainDays: updated.snapshotsRetainDays,
+    motionEnabled: updated.motionEnabled,
+    detectWidth: updated.detectWidth,
+    detectHeight: updated.detectHeight,
+    detectFps: updated.detectFps,
+    zoneName: updated.zoneName,
+    zoneCoordinates: updated.zoneCoordinates || undefined,
+    zoneObjects: updated.zoneObjects || undefined,
+    reviewRequiredZones: updated.reviewRequiredZones || undefined,
     ip: updated.ip || undefined,
     port: updated.port ?? undefined,
     username: updated.username || undefined,
@@ -346,6 +502,19 @@ export async function getCameraByIdAdmin(cameraId: string): Promise<AdminCameraR
     label: camera.label || undefined,
     inputUrl: camera.inputUrl || undefined,
     isTestFeed: camera.isTestFeed,
+    inputArgs: camera.inputArgs || undefined,
+    roles: camera.roles || undefined,
+    recordEnabled: camera.recordEnabled,
+    snapshotsEnabled: camera.snapshotsEnabled,
+    snapshotsRetainDays: camera.snapshotsRetainDays,
+    motionEnabled: camera.motionEnabled,
+    detectWidth: camera.detectWidth,
+    detectHeight: camera.detectHeight,
+    detectFps: camera.detectFps,
+    zoneName: camera.zoneName,
+    zoneCoordinates: camera.zoneCoordinates || undefined,
+    zoneObjects: camera.zoneObjects || undefined,
+    reviewRequiredZones: camera.reviewRequiredZones || undefined,
     ip: camera.ip || undefined,
     port: camera.port ?? undefined,
     username: camera.username || undefined,
@@ -427,6 +596,19 @@ export async function updateCamera(
       label: updated.label || undefined,
       inputUrl: updated.inputUrl || undefined,
       isTestFeed: updated.isTestFeed,
+      inputArgs: updated.inputArgs || undefined,
+      roles: updated.roles || undefined,
+      recordEnabled: updated.recordEnabled,
+      snapshotsEnabled: updated.snapshotsEnabled,
+      snapshotsRetainDays: updated.snapshotsRetainDays,
+      motionEnabled: updated.motionEnabled,
+      detectWidth: updated.detectWidth,
+      detectHeight: updated.detectHeight,
+      detectFps: updated.detectFps,
+      zoneName: updated.zoneName,
+      zoneCoordinates: updated.zoneCoordinates || undefined,
+      zoneObjects: updated.zoneObjects || undefined,
+      reviewRequiredZones: updated.reviewRequiredZones || undefined,
       ip: updated.ip || undefined,
       port: updated.port ?? undefined,
       username: updated.username || undefined,
@@ -448,6 +630,58 @@ export async function updateCamera(
 
   if (input.isTestFeed !== undefined) {
     dataToUpdate.isTestFeed = input.isTestFeed;
+  }
+
+  if (input.inputArgs !== undefined) {
+    dataToUpdate.inputArgs = input.inputArgs ? input.inputArgs.trim() : null;
+  }
+
+  if (input.roles !== undefined) {
+    dataToUpdate.roles = input.roles ? input.roles.trim() : null;
+  }
+
+  if (input.recordEnabled !== undefined) {
+    dataToUpdate.recordEnabled = input.recordEnabled;
+  }
+
+  if (input.snapshotsEnabled !== undefined) {
+    dataToUpdate.snapshotsEnabled = input.snapshotsEnabled;
+  }
+
+  if (input.snapshotsRetainDays !== undefined) {
+    dataToUpdate.snapshotsRetainDays = input.snapshotsRetainDays;
+  }
+
+  if (input.motionEnabled !== undefined) {
+    dataToUpdate.motionEnabled = input.motionEnabled;
+  }
+
+  if (input.detectWidth !== undefined) {
+    dataToUpdate.detectWidth = input.detectWidth;
+  }
+
+  if (input.detectHeight !== undefined) {
+    dataToUpdate.detectHeight = input.detectHeight;
+  }
+
+  if (input.detectFps !== undefined) {
+    dataToUpdate.detectFps = input.detectFps;
+  }
+
+  if (input.zoneName !== undefined) {
+    dataToUpdate.zoneName = input.zoneName ? input.zoneName.trim() : null;
+  }
+
+  if (input.zoneCoordinates !== undefined) {
+    dataToUpdate.zoneCoordinates = input.zoneCoordinates ? input.zoneCoordinates.trim() : null;
+  }
+
+  if (input.zoneObjects !== undefined) {
+    dataToUpdate.zoneObjects = input.zoneObjects ? input.zoneObjects.trim() : null;
+  }
+
+  if (input.reviewRequiredZones !== undefined) {
+    dataToUpdate.reviewRequiredZones = input.reviewRequiredZones ? input.reviewRequiredZones.trim() : null;
   }
 
   if (input.ip !== undefined) {

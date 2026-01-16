@@ -20,10 +20,53 @@ function buildCameraBlock(camera: {
   inputUrl: string;
   isEnabled: boolean;
   isTestFeed: boolean;
+  inputArgs?: string | null;
+  roles?: string | null;
+  recordEnabled: boolean;
+  snapshotsEnabled: boolean;
+  snapshotsRetainDays: number;
+  motionEnabled: boolean;
+  detectWidth: number;
+  detectHeight: number;
+  detectFps: number;
+  zoneName: string;
+  zoneCoordinates?: string | null;
+  zoneObjects?: string | null;
+  reviewRequiredZones?: string | null;
 }): string {
-  const inputArgs = camera.isTestFeed
-    ? '          input_args: -re -stream_loop -1\n'
-    : '';
+  const inputArgsValue = camera.inputArgs?.trim()
+    ? camera.inputArgs.trim()
+    : camera.isTestFeed
+      ? '-re -stream_loop -1'
+      : '';
+  const inputArgs = inputArgsValue ? `          input_args: ${inputArgsValue}\n` : '';
+
+  const roles = camera.roles?.trim()
+    ? camera.roles.split(',').map((role) => role.trim()).filter(Boolean)
+    : ['detect'];
+  const rolesLines = roles.map((role) => `            - ${role}`).join('\n');
+
+  const zoneName = camera.zoneName?.trim() || 'face';
+  const zoneCoordinates = camera.zoneCoordinates?.trim() || DEFAULT_ZONE_COORDS;
+  const zoneObjects = camera.zoneObjects?.trim()
+    ? camera.zoneObjects.split(',').map((value) => value.trim()).filter(Boolean)
+    : ['person', 'car', 'cat', 'dog'];
+  const zoneObjectsLines = zoneObjects.map((value) => `          - ${value}`).join('\n');
+
+  const reviewZones = camera.reviewRequiredZones?.trim()
+    ? camera.reviewRequiredZones.split(',').map((value) => value.trim()).filter(Boolean)
+    : [zoneName];
+  const reviewZonesBlock =
+    reviewZones.length === 1
+      ? `        required_zones: ${reviewZones[0]}`
+      : `        required_zones:\n${reviewZones.map((value) => `          - ${value}`).join('\n')}`;
+
+  const zoneCoordinateLines = zoneCoordinates
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => `          ${line}`)
+    .join('\n');
 
   return `  ${camera.frigateCameraKey}:
     enabled: ${camera.isEnabled ? 'true' : 'false'}
@@ -32,44 +75,61 @@ function buildCameraBlock(camera: {
       inputs:
         - path: ${camera.inputUrl}
 ${inputArgs}          roles:
-            - detect
+${rolesLines}
 
     detect:
       enabled: true
-      width: 320
-      height: 180
-      fps: 5
+      width: ${camera.detectWidth}
+      height: ${camera.detectHeight}
+      fps: ${camera.detectFps}
 
     record:
-      enabled: true
+      enabled: ${camera.recordEnabled ? 'true' : 'false'}
 
     snapshots:
-      enabled: true
+      enabled: ${camera.snapshotsEnabled ? 'true' : 'false'}
       retain:
-        default: 10
+        default: ${camera.snapshotsRetainDays}
 
     motion:
-      enabled: true
+      enabled: ${camera.motionEnabled ? 'true' : 'false'}
 
     zones:
-      face:
+      ${zoneName}:
         coordinates:
-          ${DEFAULT_ZONE_COORDS}
+${zoneCoordinateLines}
         loitering_time: 2
         inertia: 3
         objects:
-          - person
-          - car
-          - cat
-          - dog
+${zoneObjectsLines}
 
     review:
       alerts:
-        required_zones: face
+${reviewZonesBlock}
 `;
 }
 
-function buildCamerasSection(cameras: Array<{ frigateCameraKey: string; inputUrl: string; isEnabled: boolean; isTestFeed: boolean; }>): string {
+function buildCamerasSection(
+  cameras: Array<{
+    frigateCameraKey: string;
+    inputUrl: string;
+    isEnabled: boolean;
+    isTestFeed: boolean;
+    inputArgs?: string | null;
+    roles?: string | null;
+    recordEnabled: boolean;
+    snapshotsEnabled: boolean;
+    snapshotsRetainDays: number;
+    motionEnabled: boolean;
+    detectWidth: number;
+    detectHeight: number;
+    detectFps: number;
+    zoneName: string;
+    zoneCoordinates?: string | null;
+    zoneObjects?: string | null;
+    reviewRequiredZones?: string | null;
+  }>
+): string {
   const blocks = cameras.map(buildCameraBlock).join('\n');
   return `cameras:\n${blocks}`;
 }
@@ -93,6 +153,19 @@ export async function regenerateFrigateConfig(): Promise<{ path: string; count: 
       inputUrl: true,
       isEnabled: true,
       isTestFeed: true,
+      inputArgs: true,
+      roles: true,
+      recordEnabled: true,
+      snapshotsEnabled: true,
+      snapshotsRetainDays: true,
+      motionEnabled: true,
+      detectWidth: true,
+      detectHeight: true,
+      detectFps: true,
+      zoneName: true,
+      zoneCoordinates: true,
+      zoneObjects: true,
+      reviewRequiredZones: true,
     },
   });
 
@@ -109,6 +182,19 @@ export async function regenerateFrigateConfig(): Promise<{ path: string; count: 
       inputUrl: camera.inputUrl as string,
       isEnabled: camera.isEnabled,
       isTestFeed: camera.isTestFeed,
+      inputArgs: camera.inputArgs,
+      roles: camera.roles,
+      recordEnabled: camera.recordEnabled,
+      snapshotsEnabled: camera.snapshotsEnabled,
+      snapshotsRetainDays: camera.snapshotsRetainDays,
+      motionEnabled: camera.motionEnabled,
+      detectWidth: camera.detectWidth,
+      detectHeight: camera.detectHeight,
+      detectFps: camera.detectFps,
+      zoneName: camera.zoneName,
+      zoneCoordinates: camera.zoneCoordinates,
+      zoneObjects: camera.zoneObjects,
+      reviewRequiredZones: camera.reviewRequiredZones,
     }))
   );
 
