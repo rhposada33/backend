@@ -134,6 +134,28 @@ function buildCamerasSection(
   return `cameras:\n${blocks}`;
 }
 
+function buildGo2RtcSection(
+  cameras: Array<{
+    frigateCameraKey: string;
+    inputUrl: string;
+    isTestFeed: boolean;
+  }>
+): string {
+  const streams = cameras
+    .map((camera) => {
+      const source = camera.isTestFeed
+        ? camera.inputUrl.startsWith('ffmpeg:')
+          ? camera.inputUrl
+          : `ffmpeg:${camera.inputUrl}`
+        : camera.inputUrl;
+
+      return `    ${camera.frigateCameraKey}:\n      - ${source}`;
+    })
+    .join('\n');
+
+  return `go2rtc:\n  streams:\n${streams}\n`;
+}
+
 function replaceCamerasSection(contents: string, camerasSection: string): string {
   const regex = /^cameras:\n[\s\S]*?(?=^[A-Za-z_][\w-]*:\s*$|\Z)/m;
   if (regex.test(contents)) {
@@ -141,6 +163,15 @@ function replaceCamerasSection(contents: string, camerasSection: string): string
   }
 
   return `${contents.trimEnd()}\n\n${camerasSection.trimEnd()}\n`;
+}
+
+function replaceGo2RtcSection(contents: string, go2rtcSection: string): string {
+  const regex = /^go2rtc:\n[\s\S]*?(?=^[A-Za-z_][\w-]*:\s*$|\Z)/m;
+  if (regex.test(contents)) {
+    return contents.replace(regex, go2rtcSection.trimEnd() + '\n');
+  }
+
+  return `${contents.trimEnd()}\n\n${go2rtcSection.trimEnd()}\n`;
 }
 
 export async function regenerateFrigateConfig(): Promise<{ path: string; count: number }> {
@@ -198,8 +229,19 @@ export async function regenerateFrigateConfig(): Promise<{ path: string; count: 
     }))
   );
 
+  const go2rtcSection = buildGo2RtcSection(
+    cameras.map((camera) => ({
+      frigateCameraKey: camera.frigateCameraKey,
+      inputUrl: camera.inputUrl as string,
+      isTestFeed: camera.isTestFeed,
+    }))
+  );
+
   const contents = await fs.readFile(configPath, 'utf8');
-  const updated = replaceCamerasSection(contents, camerasSection);
+  const updated = replaceGo2RtcSection(
+    replaceCamerasSection(contents, camerasSection),
+    go2rtcSection
+  );
 
   await fs.writeFile(configPath, updated, 'utf8');
 
