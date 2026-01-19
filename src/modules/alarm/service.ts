@@ -9,6 +9,7 @@ export interface AlarmFilters {
   cameraId?: string;
   label?: string;
   type?: string;
+  status?: 'unresolved' | 'acknowledged' | 'resolved';
   from?: Date;
   to?: Date;
 }
@@ -63,6 +64,9 @@ export async function getAlarmsByTenant(
   }
   if (filters.type) {
     where.type = filters.type;
+  }
+  if (filters.status) {
+    where.status = filters.status;
   }
   if (filters.from || filters.to) {
     where.createdAt = {};

@@ -43,6 +43,7 @@ export async function listAlarms(
     cameraId: req.query.cameraId as string | undefined,
     label: req.query.label as string | undefined,
     type: req.query.type as string | undefined,
+    status: req.query.status as 'unresolved' | 'acknowledged' | 'resolved' | undefined,
     from: parseDate(req.query.from as string | undefined, 'from'),
     to: parseDate(req.query.to as string | undefined, 'to'),
   };
