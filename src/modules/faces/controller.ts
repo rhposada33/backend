@@ -13,7 +13,7 @@ export async function listFaces(req: AuthenticatedRequest, res: Response): Promi
     throw new AuthenticationError('Authentication required');
   }
 
-  const faces = await faceService.listFaces();
+  const faces = await faceService.listFaces(req.user.tenantId);
   res.status(200).json({ data: faces });
 }
 
@@ -27,7 +27,7 @@ export async function createFace(req: AuthenticatedRequest, res: Response): Prom
     throw new ValidationError('Face name is required');
   }
 
-  const result = await faceService.createFace(name.trim());
+  const result = await faceService.createFace(req.user.tenantId, name.trim());
   res.status(201).json({ data: result });
 }
 
@@ -46,7 +46,7 @@ export async function registerFace(req: AuthenticatedRequest, res: Response): Pr
     throw new ValidationError('Face image is required');
   }
 
-  const result = await faceService.registerFaceImage(name.trim(), {
+  const result = await faceService.registerFaceImage(req.user.tenantId, name.trim(), {
     buffer: file.buffer,
     filename: file.originalname,
     mimetype: file.mimetype,
@@ -65,7 +65,7 @@ export async function trainFace(req: AuthenticatedRequest, res: Response): Promi
     throw new ValidationError('Face name is required');
   }
 
-  const result = await faceService.trainFace(name.trim());
+  const result = await faceService.trainFace(req.user.tenantId, name.trim());
   res.status(200).json({ data: result });
 }
 
@@ -79,7 +79,7 @@ export async function deleteFace(req: AuthenticatedRequest, res: Response): Prom
     throw new ValidationError('Face name is required');
   }
 
-  const result = await faceService.deleteFace(name.trim());
+  const result = await faceService.deleteFace(req.user.tenantId, name.trim());
   res.status(200).json({ data: result });
 }
 
@@ -99,6 +99,6 @@ export async function renameFace(req: AuthenticatedRequest, res: Response): Prom
     throw new ValidationError('New name is required');
   }
 
-  const result = await faceService.renameFace(oldName.trim(), newName.trim());
+  const result = await faceService.renameFace(req.user.tenantId, oldName.trim(), newName.trim());
   res.status(200).json({ data: result });
 }

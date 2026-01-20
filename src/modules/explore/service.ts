@@ -6,8 +6,8 @@
 import http from 'http';
 import https from 'https';
 import { URL } from 'url';
-import { config } from '../../config/index.js';
 import { prisma } from '../../db/client.js';
+import { getTenantFrigateClient } from '../frigateServer/service.js';
 
 export interface ExploreFilters {
   label?: string;
@@ -29,9 +29,9 @@ export interface FrigateEvent {
   [key: string]: unknown;
 }
 
-async function fetchFrigateJson<T>(path: string): Promise<T> {
-  const baseUrl = config.frigatBaseUrl;
-  const url = new URL(path, baseUrl);
+async function fetchFrigateJson<T>(tenantId: string, path: string): Promise<T> {
+  const client = await getTenantFrigateClient(tenantId);
+  const url = new URL(path, client.baseUrl);
   const isHttps = url.protocol === 'https:';
 
   const options: https.RequestOptions = {
@@ -39,15 +39,18 @@ async function fetchFrigateJson<T>(path: string): Promise<T> {
     headers: {},
   };
 
-  const token = await getFrigateAuthToken();
-  if (token) {
+  if (client.token) {
     options.headers = {
-      Authorization: `Bearer ${token}`,
-      Cookie: `frigate_token=${token}`,
+      Authorization: `Bearer ${client.token}`,
+      Cookie: `frigate_token=${client.token}`,
     };
   }
 
-  if (isHttps && config.nodeEnv === 'development') {
+  if (isHttps && client.verifyTls === false) {
+    options.rejectUnauthorized = false;
+  }
+
+  if (isHttps && (await import('../../config/index.js')).config.nodeEnv === 'development') {
     options.rejectUnauthorized = false;
   }
 
@@ -73,71 +76,6 @@ async function fetchFrigateJson<T>(path: string): Promise<T> {
     });
 
     req.on('error', reject);
-    req.end();
-  });
-}
-
-let cachedFrigateToken: string | null = null;
-
-export async function getFrigateAuthToken(): Promise<string | null> {
-  if (config.frigateAuthToken) {
-    return config.frigateAuthToken;
-  }
-
-  if (cachedFrigateToken) {
-    return cachedFrigateToken;
-  }
-
-  if (!config.frigateUsername || !config.frigatePassword) {
-    return null;
-  }
-
-  const baseUrl = config.frigatBaseUrl;
-  const url = new URL('/api/login', baseUrl);
-  const isHttps = url.protocol === 'https:';
-
-  const payload = JSON.stringify({
-    user: config.frigateUsername,
-    password: config.frigatePassword,
-  });
-
-  const options: https.RequestOptions = {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(payload),
-    },
-  };
-
-  if (isHttps && config.nodeEnv === 'development') {
-    options.rejectUnauthorized = false;
-  }
-
-  const requestFn = isHttps ? https.request : http.request;
-
-  return new Promise<string | null>((resolve, reject) => {
-    const req = requestFn(url, options, (res) => {
-      const setCookie = res.headers['set-cookie'];
-      if (!setCookie || setCookie.length === 0) {
-        console.warn('Frigate login did not return a cookie');
-        resolve(null);
-        return;
-      }
-
-      const tokenCookie = setCookie.find((cookie) => cookie.startsWith('frigate_token='));
-      if (!tokenCookie) {
-        console.warn('Frigate token cookie not found');
-        resolve(null);
-        return;
-      }
-
-      const token = tokenCookie.split(';')[0].split('=')[1];
-      cachedFrigateToken = token;
-      resolve(token);
-    });
-
-    req.on('error', reject);
-    req.write(payload);
     req.end();
   });
 }
@@ -178,7 +116,7 @@ export async function getExploreEvents(
   }
 
   const path = `/api/events${searchParams.toString() ? `?${searchParams}` : ''}`;
-  const events = await fetchFrigateJson<FrigateEvent[]>(path);
+  const events = await fetchFrigateJson<FrigateEvent[]>(tenantId, path);
 
   return events.filter((event) => tenantCameras.includes(event.camera));
 }
@@ -191,7 +129,7 @@ export async function getExploreSummary(
   try {
     const rawSummary = await fetchFrigateJson<
       Array<{ label: string; count: number }> | Record<string, number>
-    >('/api/events/summary');
+    >(tenantId, '/api/events/summary');
 
     if (Array.isArray(rawSummary)) {
       const mapped: Record<string, number> = {};

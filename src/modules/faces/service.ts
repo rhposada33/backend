@@ -3,30 +3,28 @@
  * Proxies Frigate face management endpoints
  */
 
-import { config } from '../../config/index.js';
 import { ApiError } from '../../middleware/errorHandler.js';
-import { getFrigateAuthToken } from '../explore/service.js';
+import { getTenantFrigateClient } from '../frigateServer/service.js';
 
 type JsonValue = Record<string, unknown> | Array<unknown> | string | number | boolean | null;
 
 async function frigateRequest<T = JsonValue>(
+  tenantId: string,
   path: string,
   options: RequestInit
 ): Promise<T> {
-  const baseUrl = config.frigatBaseUrl;
-  const url = new URL(path, baseUrl);
+  const client = await getTenantFrigateClient(tenantId);
+  const url = new URL(path, client.baseUrl);
 
-  const token = await getFrigateAuthToken();
   const headers = new Headers(options.headers);
 
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-    headers.set('Cookie', `frigate_token=${token}`);
+  if (client.token) {
+    headers.set('Authorization', `Bearer ${client.token}`);
+    headers.set('Cookie', `frigate_token=${client.token}`);
   }
 
   const originalTls = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
-  const shouldDisableTls = config.nodeEnv === 'development' && url.protocol === 'https:';
-
+  const shouldDisableTls = client.verifyTls === false && url.protocol === 'https:';
   if (shouldDisableTls) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
   }
@@ -55,41 +53,45 @@ async function frigateRequest<T = JsonValue>(
   return (await response.text()) as unknown as T;
 }
 
-export async function listFaces() {
-  return frigateRequest('/api/faces', { method: 'GET' });
+export async function listFaces(tenantId: string) {
+  return frigateRequest(tenantId, '/api/faces', { method: 'GET' });
 }
 
-export async function createFace(name: string) {
-  return frigateRequest(`/api/faces/${encodeURIComponent(name)}/create`, {
+export async function createFace(tenantId: string, name: string) {
+  return frigateRequest(tenantId, `/api/faces/${encodeURIComponent(name)}/create`, {
     method: 'POST',
   });
 }
 
-export async function registerFaceImage(name: string, file: { buffer: Buffer; filename: string; mimetype: string }) {
+export async function registerFaceImage(
+  tenantId: string,
+  name: string,
+  file: { buffer: Buffer; filename: string; mimetype: string }
+) {
   const form = new FormData();
   const blob = new Blob([file.buffer], { type: file.mimetype || 'application/octet-stream' });
   form.append('file', blob, file.filename || 'face.jpg');
 
-  return frigateRequest(`/api/faces/${encodeURIComponent(name)}/register`, {
+  return frigateRequest(tenantId, `/api/faces/${encodeURIComponent(name)}/register`, {
     method: 'POST',
     body: form,
   });
 }
 
-export async function trainFace(name: string) {
-  return frigateRequest(`/api/faces/train/${encodeURIComponent(name)}/classify`, {
+export async function trainFace(tenantId: string, name: string) {
+  return frigateRequest(tenantId, `/api/faces/train/${encodeURIComponent(name)}/classify`, {
     method: 'POST',
   });
 }
 
-export async function deleteFace(name: string) {
-  return frigateRequest(`/api/faces/${encodeURIComponent(name)}/delete`, {
+export async function deleteFace(tenantId: string, name: string) {
+  return frigateRequest(tenantId, `/api/faces/${encodeURIComponent(name)}/delete`, {
     method: 'POST',
   });
 }
 
-export async function renameFace(oldName: string, newName: string) {
-  return frigateRequest(`/api/faces/${encodeURIComponent(oldName)}/rename`, {
+export async function renameFace(tenantId: string, oldName: string, newName: string) {
+  return frigateRequest(tenantId, `/api/faces/${encodeURIComponent(oldName)}/rename`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

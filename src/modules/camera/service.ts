@@ -821,8 +821,11 @@ export async function getCameraStreams(tenantId: string): Promise<CameraStream[]
     },
   });
 
+  const { getTenantFrigateClient } = await import('../frigateServer/service.js');
+  const client = await getTenantFrigateClient(tenantId);
+
   // Transform cameras to CameraStream format with constructed URLs
-  return cameras.map((camera) => buildCameraStream(camera));
+  return cameras.map((camera) => buildCameraStream(camera, client.baseUrl));
 }
 
 /**
@@ -834,11 +837,11 @@ function buildCameraStream(camera: {
   id: string;
   frigateCameraKey: string;
   label: string | null;
-}): CameraStream {
+}, baseUrl: string): CameraStream {
   // Construct livestream URL
   // Format: {FRIGATE_BASE_URL}/api/camera/{frigateCameraKey}/webrtc
   // Additional protocols available: /mjpeg, /snapshot, /clip
-  const streamUrl = `${config.frigatBaseUrl}/api/camera/${encodeURIComponent(camera.frigateCameraKey)}/webrtc`;
+  const streamUrl = `${baseUrl}/api/camera/${encodeURIComponent(camera.frigateCameraKey)}/webrtc`;
 
   return {
     cameraId: camera.id,

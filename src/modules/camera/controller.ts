@@ -29,7 +29,7 @@ import { AuthenticatedRequest } from '../../auth/middleware.js';
 import * as cameraService from './service.js';
 import * as tenantService from '../tenant/service.js';
 import { prisma } from '../../db/client.js';
-import { regenerateFrigateConfig } from '../frigateConfig/service.js';
+import { regenerateFrigateConfig, regenerateFrigateConfigForServer } from '../frigateConfig/service.js';
 import * as proxyService from './proxy.js';
 
 /**
@@ -1121,7 +1121,10 @@ export async function syncFrigateConfig(
       return;
     }
 
-    const result = await regenerateFrigateConfig();
+    const serverId = typeof req.body?.serverId === 'string' ? req.body.serverId : null;
+    const result = serverId
+      ? await regenerateFrigateConfigForServer(serverId)
+      : await regenerateFrigateConfig();
 
     res.status(200).json({
       message: 'Frigate config updated',
@@ -1674,11 +1677,19 @@ export async function proxyStream(
     // - Frigate request
     // - Error handling
     // - Header preservation
+    const { getTenantFrigateClient } = await import('../frigateServer/service.js');
+    const client = await getTenantFrigateClient(req.user.tenantId);
+
     await proxyService.proxyFrigateStream(
       req.user.tenantId,
       cameraKey.trim(),
       format as any,
-      res
+      res,
+      {
+        baseUrl: client.baseUrl,
+        token: client.token,
+        verifyTls: client.verifyTls,
+      }
     );
   } catch (error) {
     console.error('Proxy stream error:', error);
@@ -1706,6 +1717,7 @@ export async function proxyJsmpegStream(ws: any, req: any): Promise<void> {
     const { default: jwt } = await import('jsonwebtoken');
     const { config } = await import('../../config/index.js');
     const { proxyFrigateWebSocketStream } = await import('./proxy.js');
+    const { getTenantFrigateClient } = await import('../frigateServer/service.js');
 
     console.log('[WebSocket] Connection established, parsing request...');
     console.log('[WebSocket] URL:', req.url);
@@ -1774,8 +1786,11 @@ export async function proxyJsmpegStream(ws: any, req: any): Promise<void> {
       return;
     }
 
+    const client = await getTenantFrigateClient(tenantId);
+    const resolvedFrigateToken = frigateToken || client.token || '';
+
     // Validate frigate token
-    if (!frigateToken) {
+    if (!resolvedFrigateToken) {
       console.log('❌ Frigate token missing');
       ws.close?.();
       return;
@@ -1790,8 +1805,10 @@ export async function proxyJsmpegStream(ws: any, req: any): Promise<void> {
       cameraKey.trim(),
       ws,
       Buffer.alloc(0),
-      frigateToken,
-      testMode
+      resolvedFrigateToken,
+      testMode,
+      client.baseUrl,
+      client.verifyTls
     );
   } catch (error) {
     console.error('WebSocket proxy error:', error);

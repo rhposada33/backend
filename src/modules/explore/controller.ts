@@ -10,9 +10,9 @@ import * as exploreService from './service.js';
 import { config } from '../../config/index.js';
 import http from 'http';
 import https from 'https';
-import { getFrigateAuthToken } from './service.js';
 import fs from 'fs';
 import path from 'path';
+import { getTenantFrigateClient } from '../frigateServer/service.js';
 
 function parseNumber(value: unknown, name: string): number | undefined {
   if (value === undefined) return undefined;
@@ -123,20 +123,24 @@ export async function getExploreSnapshot(
     }
   }
 
-  const frigateUrl = `${config.frigatBaseUrl}/api/events/${encodeURIComponent(id)}/snapshot.jpg`;
+  const client = await getTenantFrigateClient(req.user.tenantId);
+  const frigateUrl = `${client.baseUrl}/api/events/${encodeURIComponent(id)}/snapshot.jpg`;
   const isHttps = frigateUrl.startsWith('https');
   const protocol = isHttps ? https : http;
   const requestOptions: https.RequestOptions = {};
+
+  if (isHttps && client.verifyTls === false) {
+    requestOptions.rejectUnauthorized = false;
+  }
 
   if (isHttps && config.nodeEnv === 'development') {
     requestOptions.rejectUnauthorized = false;
   }
 
-  const token = await getFrigateAuthToken();
-  if (token) {
+  if (client.token) {
     requestOptions.headers = {
-      Authorization: `Bearer ${token}`,
-      Cookie: `frigate_token=${token}`,
+      Authorization: `Bearer ${client.token}`,
+      Cookie: `frigate_token=${client.token}`,
     };
   }
 

@@ -73,7 +73,11 @@ import expressWs from 'express-ws';
   // ============================================================================
 
   // Security headers
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    })
+  );
 
   // CORS configuration - support multiple origins
   const corsOrigins = config.corsOrigin

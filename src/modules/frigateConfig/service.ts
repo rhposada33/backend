@@ -247,3 +247,95 @@ export async function regenerateFrigateConfig(): Promise<{ path: string; count: 
 
   return { path: path.resolve(configPath), count: cameras.length };
 }
+
+export async function regenerateFrigateConfigForServer(
+  serverId: string
+): Promise<{ path: string; count: number }> {
+  const server = await prisma.frigateServer.findUnique({
+    where: { id: serverId },
+    select: {
+      id: true,
+      tenantId: true,
+      configPath: true,
+    },
+  });
+
+  if (!server) {
+    throw new ValidationError('Frigate server not found');
+  }
+
+  if (!server.configPath) {
+    throw new ValidationError('Frigate server configPath is required');
+  }
+
+  const cameras = await prisma.camera.findMany({
+    where: { tenantId: server.tenantId },
+    orderBy: { frigateCameraKey: 'asc' },
+    select: {
+      frigateCameraKey: true,
+      inputUrl: true,
+      isEnabled: true,
+      isTestFeed: true,
+      inputArgs: true,
+      roles: true,
+      recordEnabled: true,
+      snapshotsEnabled: true,
+      snapshotsRetainDays: true,
+      motionEnabled: true,
+      detectWidth: true,
+      detectHeight: true,
+      detectFps: true,
+      zoneName: true,
+      zoneCoordinates: true,
+      zoneObjects: true,
+      reviewRequiredZones: true,
+    },
+  });
+
+  const missingInput = cameras.filter((camera) => !camera.inputUrl || camera.inputUrl.trim().length === 0);
+  if (missingInput.length > 0) {
+    throw new ValidationError(
+      `Missing inputUrl for cameras: ${missingInput.map((camera) => camera.frigateCameraKey).join(', ')}`
+    );
+  }
+
+  const camerasSection = buildCamerasSection(
+    cameras.map((camera) => ({
+      frigateCameraKey: camera.frigateCameraKey,
+      inputUrl: camera.inputUrl as string,
+      isEnabled: camera.isEnabled,
+      isTestFeed: camera.isTestFeed,
+      inputArgs: camera.inputArgs,
+      roles: camera.roles,
+      recordEnabled: camera.recordEnabled,
+      snapshotsEnabled: camera.snapshotsEnabled,
+      snapshotsRetainDays: camera.snapshotsRetainDays,
+      motionEnabled: camera.motionEnabled,
+      detectWidth: camera.detectWidth,
+      detectHeight: camera.detectHeight,
+      detectFps: camera.detectFps,
+      zoneName: camera.zoneName,
+      zoneCoordinates: camera.zoneCoordinates,
+      zoneObjects: camera.zoneObjects,
+      reviewRequiredZones: camera.reviewRequiredZones,
+    }))
+  );
+
+  const go2rtcSection = buildGo2RtcSection(
+    cameras.map((camera) => ({
+      frigateCameraKey: camera.frigateCameraKey,
+      inputUrl: camera.inputUrl as string,
+      isTestFeed: camera.isTestFeed,
+    }))
+  );
+
+  const contents = await fs.readFile(server.configPath, 'utf8');
+  const updated = replaceGo2RtcSection(
+    replaceCamerasSection(contents, camerasSection),
+    go2rtcSection
+  );
+
+  await fs.writeFile(server.configPath, updated, 'utf8');
+
+  return { path: path.resolve(server.configPath), count: cameras.length };
+}

@@ -82,7 +82,8 @@ export async function proxyFrigateStream(
   tenantId: string,
   cameraKey: string,
   format: StreamFormat,
-  res: Response
+  res: Response,
+  options?: { baseUrl?: string; token?: string | null; verifyTls?: boolean }
 ): Promise<void> {
   // SECURITY: Verify camera belongs to this tenant
   const camera = await verifyCameraOwnership(tenantId, cameraKey);
@@ -97,16 +98,28 @@ export async function proxyFrigateStream(
 
   // Build Frigate URL
   // Frigate base URL from config (internal Docker: http://frigate:5000)
-  const frigateUrl = `${config.frigatBaseUrl}/api/camera/${encodeURIComponent(cameraKey)}/${format}`;
+  const baseUrl = options?.baseUrl || config.frigatBaseUrl;
+  const frigateUrl = `${baseUrl}/api/camera/${encodeURIComponent(cameraKey)}/${format}`;
 
   try {
     // Determine if HTTPS or HTTP based on config
-    const protocol = config.frigatBaseUrl.startsWith('https') ? https : http;
+    const protocol = baseUrl.startsWith('https') ? https : http;
 
     // For HTTPS with self-signed certificates, disable SSL verification in development
     const requestOptions: https.RequestOptions = {};
-    if (config.frigatBaseUrl.startsWith('https') && config.nodeEnv === 'development') {
+    if (baseUrl.startsWith('https') && config.nodeEnv === 'development') {
       requestOptions.rejectUnauthorized = false;
+    }
+    if (baseUrl.startsWith('https') && options?.verifyTls === false) {
+      requestOptions.rejectUnauthorized = false;
+    }
+
+    if (options?.token) {
+      requestOptions.headers = {
+        ...requestOptions.headers,
+        Authorization: `Bearer ${options.token}`,
+        Cookie: `frigate_token=${options.token}`,
+      };
     }
 
     // Make request to Frigate
@@ -236,7 +249,9 @@ export async function proxyFrigateWebSocketStream(
   socket: any,
   head: Buffer,
   frigateToken: string,
-  skipCameraCheck: boolean = false
+  skipCameraCheck: boolean = false,
+  baseUrl: string = config.frigatBaseUrl,
+  verifyTls: boolean = true
 ): Promise<void> {
   console.log('[ProxyFrigateWebSocketStream] Called with:', {
     tenantId,
@@ -262,8 +277,8 @@ export async function proxyFrigateWebSocketStream(
   try {
     // Build Frigate WebSocket URL
     // Using wss:// or ws:// based on config
-    const protocol = config.frigatBaseUrl.startsWith('https') ? 'wss' : 'ws';
-    const frigateHost = config.frigatBaseUrl.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
+    const protocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
+    const frigateHost = baseUrl.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
     const frigateUrl = `${protocol}://${frigateHost}:8971/live/jsmpeg/${encodeURIComponent(cameraKey)}`;
 
     console.log(`[ProxyFrigateWebSocketStream] Connecting to Frigate:`, { frigateUrl, protocol, frigateHost });
@@ -271,7 +286,7 @@ export async function proxyFrigateWebSocketStream(
     // Create WebSocket connection to Frigate with authentication
     const wsOptions: WebSocket.ClientOptions = {
       headers: {
-        'Origin': config.frigatBaseUrl,
+        'Origin': baseUrl,
         'User-Agent': 'SatelitEyes-Guard-Backend/1.0',
         Cookie: `frigate_token=${frigateToken}`,
       },
@@ -279,6 +294,9 @@ export async function proxyFrigateWebSocketStream(
 
     // For self-signed certificates in development
     if (protocol === 'wss' && config.nodeEnv === 'development') {
+      (wsOptions as any).rejectUnauthorized = false;
+    }
+    if (protocol === 'wss' && !verifyTls) {
       (wsOptions as any).rejectUnauthorized = false;
     }
 
