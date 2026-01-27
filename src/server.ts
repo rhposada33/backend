@@ -83,12 +83,19 @@ import expressWs from 'express-ws';
   const corsOrigins = config.corsOrigin
     .split(',')
     .map(origin => origin.trim());
-  
+
+  const isPrivateNetworkOrigin = (origin: string): boolean => {
+    return /^(https?|wss?):\/\/(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/.test(origin);
+  };
+
   // In development, allow localhost for WebSocket testing
   if (config.nodeEnv === 'development') {
     corsOrigins.push('http://localhost:3000');
     corsOrigins.push('ws://localhost:3000');
     corsOrigins.push('wss://localhost:3000');
+    corsOrigins.push('http://localhost:8082');
+    corsOrigins.push('ws://localhost:8082');
+    corsOrigins.push('wss://localhost:8082');
     corsOrigins.push('http://localhost:8971');
     corsOrigins.push('ws://localhost:8971');
     corsOrigins.push('wss://localhost:8971');
@@ -102,6 +109,8 @@ import expressWs from 'express-ws';
         
         // Check if origin is in our allowed list
         if (corsOrigins.includes(origin)) {
+          callback(null, true);
+        } else if (config.nodeEnv === 'development' && isPrivateNetworkOrigin(origin)) {
           callback(null, true);
         } else {
           // Log the rejected origin for debugging
@@ -216,7 +225,7 @@ import expressWs from 'express-ws';
 
   const PORT = config.port;
 
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log('');
     console.log('╔════════════════════════════════════════════════════════════╗');
     console.log('║         🚀 SATELITEYES GUARD BACKEND - RUNNING 🚀          ║');
