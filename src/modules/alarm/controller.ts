@@ -180,6 +180,51 @@ async function findPreviewClip(
   return null;
 }
 
+async function findRecordingClip(
+  basePath: string,
+  cameraKey: string,
+  eventTimestamp: number
+): Promise<string | null> {
+  const eventDate = new Date(eventTimestamp * 1000);
+  const year = eventDate.getFullYear();
+  const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+  const day = String(eventDate.getDate()).padStart(2, '0');
+  const hour = String(eventDate.getHours()).padStart(2, '0');
+  const minute = eventDate.getMinutes();
+  const second = eventDate.getSeconds();
+  const eventSecondInHour = minute * 60 + second;
+
+  const recordingsDir = path.join(
+    basePath,
+    'recordings',
+    `${year}-${month}-${day}`,
+    hour,
+    cameraKey
+  );
+
+  try {
+    const entries = await fs.promises.readdir(recordingsDir);
+    let bestMatch: { start: number; file: string } | null = null;
+
+    for (const entry of entries) {
+      if (!entry.endsWith('.mp4')) continue;
+      const name = entry.replace('.mp4', '');
+      const [minStr, secStr] = name.split('.');
+      const startMin = Number.parseInt(minStr, 10);
+      const startSec = Number.parseInt(secStr, 10);
+      if (Number.isNaN(startMin) || Number.isNaN(startSec)) continue;
+      const start = startMin * 60 + startSec;
+      if (start <= eventSecondInHour && (!bestMatch || start > bestMatch.start)) {
+        bestMatch = { start, file: entry };
+      }
+    }
+
+    return bestMatch ? path.join(recordingsDir, bestMatch.file) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function streamLocalFile(filePath: string, res: Response): Promise<void> {
   res.setHeader('Content-Type', getContentType(filePath));
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -299,6 +344,12 @@ export async function getAlarmClip(
 
   const eventTimestamp = parseEventTimestamp(media.frigateId, media.startTime);
   if (eventTimestamp !== null) {
+    const recordingClip = await findRecordingClip(basePath, media.cameraKey, eventTimestamp);
+    if (recordingClip) {
+      await streamLocalFile(recordingClip, res);
+      return;
+    }
+
     const previewClip = await findPreviewClip(basePath, media.cameraKey, eventTimestamp);
     if (previewClip) {
       await streamLocalFile(previewClip, res);

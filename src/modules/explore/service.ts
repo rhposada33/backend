@@ -167,7 +167,7 @@ export async function getExploreEventDetail(
   eventId: string
 ): Promise<FrigateEvent | null> {
   const tenantCameras = await getTenantCameraKeys(tenantId);
-  const event = await fetchFrigateJson<FrigateEvent>(`/api/events/${eventId}`);
+  const event = await fetchFrigateJson<FrigateEvent>(tenantId, `/api/events/${eventId}`);
 
   if (!tenantCameras.includes(event.camera)) {
     return null;
