@@ -536,9 +536,7 @@ export async function deleteCameraById(cameraId: string): Promise<void> {
     throw new Error('Camera not found');
   }
 
-  await prisma.camera.delete({
-    where: { id: cameraId },
-  });
+  await deleteCameraRecords(cameraId);
 }
 
 /**
@@ -745,7 +743,7 @@ export async function updateCamera(
 
 /**
  * Delete a camera (must belong to tenant)
- * Related events are cascade deleted via Prisma
+ * Related events/reviews are deleted explicitly to avoid FK issues in older schemas.
  */
 export async function deleteCamera(
   tenantId: string,
@@ -763,9 +761,15 @@ export async function deleteCamera(
     throw new Error('Camera not found');
   }
 
-  await prisma.camera.delete({
-    where: { id: cameraId },
-  });
+  await deleteCameraRecords(cameraId);
+}
+
+async function deleteCameraRecords(cameraId: string): Promise<void> {
+  await prisma.$transaction([
+    prisma.event.deleteMany({ where: { cameraId } }),
+    prisma.review.deleteMany({ where: { cameraId } }),
+    prisma.camera.delete({ where: { id: cameraId } }),
+  ]);
 }
 
 /**
