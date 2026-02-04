@@ -11,10 +11,6 @@ import { ValidationError } from '../../middleware/errorHandler.js';
 
 const DEFAULT_CONFIG_PATH = '/home/rafa/satelitrack/server/config/config.yaml';
 
-const DEFAULT_ZONE_COORDS =
-  '0.159,0.166,0.19,0.854,0.781,0.931,0.886,0.769,\n' +
-  '          0.877,0.517,0.855,0.295,0.606,0.196';
-
 function buildCameraBlock(camera: {
   frigateCameraKey: string;
   inputUrl: string;
@@ -29,10 +25,6 @@ function buildCameraBlock(camera: {
   detectWidth: number;
   detectHeight: number;
   detectFps: number;
-  zoneName: string;
-  zoneCoordinates?: string | null;
-  zoneObjects?: string | null;
-  reviewRequiredZones?: string | null;
 }): string {
   const inputArgsValue = camera.inputArgs?.trim()
     ? camera.inputArgs.trim()
@@ -45,28 +37,6 @@ function buildCameraBlock(camera: {
     ? camera.roles.split(',').map((role) => role.trim()).filter(Boolean)
     : ['detect'];
   const rolesLines = roles.map((role) => `            - ${role}`).join('\n');
-
-  const zoneName = camera.zoneName?.trim() || 'face';
-  const zoneCoordinates = camera.zoneCoordinates?.trim() || DEFAULT_ZONE_COORDS;
-  const zoneObjects = camera.zoneObjects?.trim()
-    ? camera.zoneObjects.split(',').map((value) => value.trim()).filter(Boolean)
-    : ['person', 'car', 'cat', 'dog'];
-  const zoneObjectsLines = zoneObjects.map((value) => `          - ${value}`).join('\n');
-
-  const reviewZones = camera.reviewRequiredZones?.trim()
-    ? camera.reviewRequiredZones.split(',').map((value) => value.trim()).filter(Boolean)
-    : [zoneName];
-  const reviewZonesBlock =
-    reviewZones.length === 1
-      ? `        required_zones: ${reviewZones[0]}`
-      : `        required_zones:\n${reviewZones.map((value) => `          - ${value}`).join('\n')}`;
-
-  const zoneCoordinateLines = zoneCoordinates
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => `          ${line}`)
-    .join('\n');
 
   return `  ${camera.frigateCameraKey}:
     enabled: ${camera.isEnabled ? 'true' : 'false'}
@@ -93,19 +63,6 @@ ${rolesLines}
 
     motion:
       enabled: ${camera.motionEnabled ? 'true' : 'false'}
-
-    zones:
-      ${zoneName}:
-        coordinates:
-${zoneCoordinateLines}
-        loitering_time: 2
-        inertia: 3
-        objects:
-${zoneObjectsLines}
-
-    review:
-      alerts:
-${reviewZonesBlock}
 `;
 }
 
@@ -124,10 +81,6 @@ function buildCamerasSection(
     detectWidth: number;
     detectHeight: number;
     detectFps: number;
-    zoneName: string;
-    zoneCoordinates?: string | null;
-    zoneObjects?: string | null;
-    reviewRequiredZones?: string | null;
   }>
 ): string {
   const blocks = cameras.map(buildCameraBlock).join('\n');
@@ -193,10 +146,6 @@ export async function regenerateFrigateConfig(): Promise<{ path: string; count: 
       detectWidth: true,
       detectHeight: true,
       detectFps: true,
-      zoneName: true,
-      zoneCoordinates: true,
-      zoneObjects: true,
-      reviewRequiredZones: true,
     },
   });
 
@@ -222,10 +171,6 @@ export async function regenerateFrigateConfig(): Promise<{ path: string; count: 
       detectWidth: camera.detectWidth,
       detectHeight: camera.detectHeight,
       detectFps: camera.detectFps,
-      zoneName: camera.zoneName,
-      zoneCoordinates: camera.zoneCoordinates,
-      zoneObjects: camera.zoneObjects,
-      reviewRequiredZones: camera.reviewRequiredZones,
     }))
   );
 
@@ -285,10 +230,6 @@ export async function regenerateFrigateConfigForServer(
       detectWidth: true,
       detectHeight: true,
       detectFps: true,
-      zoneName: true,
-      zoneCoordinates: true,
-      zoneObjects: true,
-      reviewRequiredZones: true,
     },
   });
 
@@ -314,10 +255,6 @@ export async function regenerateFrigateConfigForServer(
       detectWidth: camera.detectWidth,
       detectHeight: camera.detectHeight,
       detectFps: camera.detectFps,
-      zoneName: camera.zoneName,
-      zoneCoordinates: camera.zoneCoordinates,
-      zoneObjects: camera.zoneObjects,
-      reviewRequiredZones: camera.reviewRequiredZones,
     }))
   );
 
