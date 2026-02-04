@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import { register, login, listTenantUsers, createTenantUser, updateTenantUser, deleteTenantUser } from './controller.js';
+import { register, login, listTenantUsers, createTenantUser, updateTenantUser, deleteTenantUser, getMyPreferences, updateMyTheme } from './controller.js';
 
 export const authRouter = Router();
 export const userRouter = Router();
@@ -100,6 +100,8 @@ authRouter.post('/register', register);
 authRouter.post('/login', login);
 
 userRouter.get('/', listTenantUsers);
+userRouter.get('/me/preferences', getMyPreferences);
+userRouter.patch('/me/preferences/theme', updateMyTheme);
 userRouter.post('/', createTenantUser);
 userRouter.patch('/:id', updateTenantUser);
 userRouter.delete('/:id', deleteTenantUser);

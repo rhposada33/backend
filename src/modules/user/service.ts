@@ -6,6 +6,8 @@
 import { prisma } from '../../db/client.js';
 import { hashPassword, verifyPassword, signToken } from '../../auth/index.js';
 
+export type UserTheme = 'DARK' | 'LIGHT';
+
 export interface RegisterInput {
   email: string;
   password: string;
@@ -24,6 +26,7 @@ export interface AuthResponse {
     email: string;
     tenantId: string;
     role: 'ADMIN' | 'CLIENT';
+    theme: UserTheme;
   };
   token: string;
 }
@@ -34,6 +37,10 @@ export interface UserListItem {
   role: 'ADMIN' | 'CLIENT';
   tenantId: string;
   createdAt: Date;
+}
+
+export interface UserPreferences {
+  theme: UserTheme;
 }
 
 export interface CreateUserInput {
@@ -124,6 +131,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthResponse> 
       email: user.email,
       tenantId: user.tenantId,
       role: user.role,
+      theme: user.theme,
     },
     token,
   };
@@ -163,6 +171,7 @@ export async function loginUser(input: LoginInput): Promise<AuthResponse> {
       email: user.email,
       tenantId: user.tenantId,
       role: user.role,
+      theme: user.theme,
     },
     token,
   };
@@ -288,4 +297,46 @@ export async function deleteUserForTenant(userId: string, tenantId: string): Pro
   await prisma.user.delete({
     where: { id: userId },
   });
+}
+
+/**
+ * Get UI preferences for the authenticated user
+ */
+export async function getUserPreferences(userId: string): Promise<UserPreferences> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { theme: true },
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  return {
+    theme: user.theme,
+  };
+}
+
+/**
+ * Update UI theme preference for the authenticated user
+ */
+export async function updateUserTheme(userId: string, theme: UserTheme): Promise<UserPreferences> {
+  const existingUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+
+  if (!existingUser) {
+    throw new Error('User not found');
+  }
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { theme },
+    select: { theme: true },
+  });
+
+  return {
+    theme: user.theme,
+  };
 }

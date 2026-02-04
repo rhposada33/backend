@@ -4,7 +4,7 @@
  */
 
 import { Request, Response } from 'express';
-import { registerUser, loginUser, listUsers, createUserForTenant, updateUserForTenant, deleteUserForTenant, LoginInput } from './service.js';
+import { registerUser, loginUser, listUsers, createUserForTenant, updateUserForTenant, deleteUserForTenant, getUserPreferences, updateUserTheme, LoginInput, UserTheme } from './service.js';
 import { AuthenticatedRequest } from '../../auth/middleware.js';
 import * as tenantService from '../tenant/service.js';
 
@@ -134,6 +134,93 @@ export async function login(req: Request, res: Response): Promise<void> {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ROLE_VALUES = new Set(['ADMIN', 'CLIENT']);
+const THEME_VALUES = new Set<UserTheme>(['DARK', 'LIGHT']);
+
+interface ThemeUpdateRequest {
+  theme?: string;
+}
+
+/**
+ * GET /users/me/preferences
+ * Get preferences for the authenticated user
+ */
+export async function getMyPreferences(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const preferences = await getUserPreferences(req.user.userId);
+
+    res.status(200).json({
+      data: preferences,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'User not found') {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'User not found',
+      });
+      return;
+    }
+
+    console.error('Get preferences error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to get user preferences',
+    });
+  }
+}
+
+/**
+ * PATCH /users/me/preferences/theme
+ * Update theme preference for the authenticated user
+ */
+export async function updateMyTheme(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const { theme } = req.body as ThemeUpdateRequest;
+    if (!theme || !THEME_VALUES.has(theme as UserTheme)) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Theme must be DARK or LIGHT',
+      });
+      return;
+    }
+
+    const preferences = await updateUserTheme(req.user.userId, theme as UserTheme);
+
+    res.status(200).json({
+      message: 'Theme updated successfully',
+      data: preferences,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'User not found') {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'User not found',
+      });
+      return;
+    }
+
+    console.error('Update theme error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to update user theme',
+    });
+  }
+}
 
 /**
  * GET /users
