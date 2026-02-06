@@ -19,6 +19,7 @@ export interface AlarmItem {
   frigateId: string;
   type: string;
   label: string | null;
+  subLabel: string | null;
   hasSnapshot: boolean;
   hasClip: boolean;
   startTime: number | null;
@@ -102,6 +103,7 @@ export async function getAlarmsByTenant(
     frigateId: event.frigateId,
     type: event.type,
     label: event.label,
+    subLabel: event.subLabel ?? null,
     hasSnapshot: event.hasSnapshot,
     hasClip: event.hasClip,
     startTime: event.startTime ?? null,
@@ -183,6 +185,7 @@ export async function acknowledgeAlarm(
     frigateId: updated.frigateId,
     type: updated.type,
     label: updated.label,
+    subLabel: updated.subLabel ?? null,
     hasSnapshot: updated.hasSnapshot,
     hasClip: updated.hasClip,
     startTime: updated.startTime ?? null,
@@ -233,6 +236,7 @@ export async function resolveAlarm(
     frigateId: updated.frigateId,
     type: updated.type,
     label: updated.label,
+    subLabel: updated.subLabel ?? null,
     hasSnapshot: updated.hasSnapshot,
     hasClip: updated.hasClip,
     startTime: updated.startTime ?? null,
