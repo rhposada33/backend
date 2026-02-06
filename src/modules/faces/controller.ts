@@ -90,6 +90,51 @@ export async function getFaceImage(req: AuthenticatedRequest, res: Response): Pr
   stream.pipe(res);
 }
 
+export async function deleteFaceImage(req: AuthenticatedRequest, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AuthenticationError('Authentication required');
+  }
+
+  const { name, filename } = req.params as { name?: string; filename?: string };
+  if (!name || !name.trim()) {
+    throw new ValidationError('Face name is required');
+  }
+  if (!filename || !filename.trim()) {
+    throw new ValidationError('Face image filename is required');
+  }
+  if (!config.frigateMediaPath) {
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'FRIGATE_MEDIA_PATH is not configured',
+    });
+    return;
+  }
+
+  const safeName = path.basename(name.trim());
+  const safeFile = path.basename(filename.trim());
+  const filePath = path.join(config.frigateMediaPath, 'clips', 'faces', safeName, safeFile);
+
+  try {
+    await fs.promises.unlink(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'Face image not found',
+      });
+      return;
+    }
+    console.error('Failed to delete face image', { filePath, error });
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to delete face image',
+    });
+    return;
+  }
+
+  res.status(204).end();
+}
+
 export async function createFace(req: AuthenticatedRequest, res: Response): Promise<void> {
   if (!req.user) {
     throw new AuthenticationError('Authentication required');
