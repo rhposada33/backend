@@ -20,6 +20,7 @@ interface Config {
   frigateUsername?: string;
   frigatePassword?: string;
   frigateConfigPath?: string;
+  frigateVerifyTls: boolean;
   // TODO: Add database configuration
   // TODO: Add additional config properties as needed
 }
@@ -35,6 +36,10 @@ function getConfig(): Config {
   const frigateUsername = process.env.FRIGATE_USERNAME;
   const frigatePassword = process.env.FRIGATE_PASSWORD;
   const frigateConfigPath = process.env.FRIGATE_CONFIG_PATH;
+  const frigateVerifyTlsEnv = process.env.FRIGATE_VERIFY_TLS;
+  const frigateVerifyTls = frigateVerifyTlsEnv
+    ? !['false', '0', 'no', 'off'].includes(frigateVerifyTlsEnv.toLowerCase())
+    : true;
   
   return {
     port: parseInt(process.env.PORT || '3000', 10),
@@ -54,6 +59,7 @@ function getConfig(): Config {
     frigateUsername,
     frigatePassword,
     frigateConfigPath,
+    frigateVerifyTls,
     // TODO: Initialize database configuration from environment
     // TODO: Add additional configuration properties
   };

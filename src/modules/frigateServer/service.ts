@@ -345,7 +345,7 @@ export async function getTenantFrigateClient(tenantId: string): Promise<FrigateC
     return {
       baseUrl: config.frigatBaseUrl,
       token: await resolveTokenFromEnv(),
-      verifyTls: true,
+      verifyTls: config.frigateVerifyTls,
     };
   }
 

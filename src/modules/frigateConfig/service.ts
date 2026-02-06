@@ -127,6 +127,49 @@ function replaceGo2RtcSection(contents: string, go2rtcSection: string): string {
   return `${contents.trimEnd()}\n\n${go2rtcSection.trimEnd()}\n`;
 }
 
+function replaceRootBlock(contents: string, key: string, block: string): string {
+  const regex = new RegExp(`^${key}:\\n[\\s\\S]*?(?=^[A-Za-z_][\\w-]*:\\s*$|\\Z)`, 'm');
+  const normalized = block.trimEnd();
+  if (regex.test(contents)) {
+    return contents.replace(regex, normalized + '\n');
+  }
+
+  return `${contents.trimEnd()}\n\n${normalized}\n`;
+}
+
+function replaceRootLine(contents: string, key: string, line: string): string {
+  const regex = new RegExp(`^${key}:.*$`, 'm');
+  if (regex.test(contents)) {
+    return contents.replace(regex, line);
+  }
+
+  return `${contents.trimEnd()}\n\n${line}\n`;
+}
+
+function ensureGlobalFrigateConfig(contents: string): string {
+  let updated = contents;
+  updated = replaceRootBlock(updated, 'detect', `detect:\n  enabled: true`);
+  updated = replaceRootLine(updated, 'version', 'version: 0.16-0');
+  updated = replaceRootBlock(
+    updated,
+    'semantic_search',
+    `semantic_search:\n  enabled: false\n  model_size: small`
+  );
+  updated = replaceRootBlock(
+    updated,
+    'face_recognition',
+    `face_recognition:\n  enabled: true\n  model_size: small`
+  );
+  updated = replaceRootBlock(updated, 'lpr', `lpr:\n  enabled: false`);
+  updated = replaceRootBlock(updated, 'mqtt', `mqtt:\n  enabled: true\n  host: mqtt`);
+  updated = replaceRootBlock(
+    updated,
+    'classification',
+    `classification:\n  bird:\n    enabled: false`
+  );
+  return updated;
+}
+
 export async function regenerateFrigateConfig(): Promise<{ path: string; count: number }> {
   const configPath = config.frigateConfigPath || DEFAULT_CONFIG_PATH;
 
@@ -183,9 +226,11 @@ export async function regenerateFrigateConfig(): Promise<{ path: string; count: 
   );
 
   const contents = await fs.readFile(configPath, 'utf8');
-  const updated = replaceGo2RtcSection(
-    replaceCamerasSection(contents, camerasSection),
-    go2rtcSection
+  const updated = ensureGlobalFrigateConfig(
+    replaceGo2RtcSection(
+      replaceCamerasSection(contents, camerasSection),
+      go2rtcSection
+    )
   );
 
   await fs.writeFile(configPath, updated, 'utf8');
@@ -267,9 +312,11 @@ export async function regenerateFrigateConfigForServer(
   );
 
   const contents = await fs.readFile(server.configPath, 'utf8');
-  const updated = replaceGo2RtcSection(
-    replaceCamerasSection(contents, camerasSection),
-    go2rtcSection
+  const updated = ensureGlobalFrigateConfig(
+    replaceGo2RtcSection(
+      replaceCamerasSection(contents, camerasSection),
+      go2rtcSection
+    )
   );
 
   await fs.writeFile(server.configPath, updated, 'utf8');

@@ -7,6 +7,44 @@ import { ApiError } from '../../middleware/errorHandler.js';
 import { getTenantFrigateClient } from '../frigateServer/service.js';
 
 type JsonValue = Record<string, unknown> | Array<unknown> | string | number | boolean | null;
+type FaceEntry = Record<string, unknown> & { name: string };
+
+function normalizeFacesPayload(payload: JsonValue): FaceEntry[] | JsonValue {
+  if (Array.isArray(payload)) {
+    return payload as FaceEntry[];
+  }
+  if (payload && typeof payload === 'object') {
+    const container = payload as Record<string, unknown>;
+    if (Array.isArray(container.faces)) {
+      return container.faces as FaceEntry[];
+    }
+    const facesMap = container.faces;
+    if (facesMap && typeof facesMap === 'object' && !Array.isArray(facesMap)) {
+      return Object.entries(facesMap as Record<string, unknown>).map(([name, value]) => {
+        if (value && typeof value === 'object') {
+          return { name, ...(value as Record<string, unknown>) };
+        }
+        return { name, value } as FaceEntry;
+      });
+    }
+    return Object.entries(container).map(([name, value]) => {
+      if (Array.isArray(value)) {
+        const first = value.find((entry) => typeof entry === 'string') as string | undefined;
+        return {
+          name,
+          count: value.length,
+          thumbnail: first,
+          images: value,
+        } as FaceEntry;
+      }
+      if (value && typeof value === 'object') {
+        return { name, ...(value as Record<string, unknown>) };
+      }
+      return { name, value } as FaceEntry;
+    });
+  }
+  return payload;
+}
 
 async function frigateRequest<T = JsonValue>(
   tenantId: string,
@@ -24,7 +62,10 @@ async function frigateRequest<T = JsonValue>(
   }
 
   const originalTls = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
-  const shouldDisableTls = client.verifyTls === false && url.protocol === 'https:';
+  const isHttps = url.protocol === 'https:';
+  const nodeEnv = (await import('../../config/index.js')).config.nodeEnv;
+  const shouldDisableTls =
+    isHttps && (client.verifyTls === false || nodeEnv === 'development');
   if (shouldDisableTls) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
   }
@@ -54,7 +95,8 @@ async function frigateRequest<T = JsonValue>(
 }
 
 export async function listFaces(tenantId: string) {
-  return frigateRequest(tenantId, '/api/faces', { method: 'GET' });
+  const payload = await frigateRequest(tenantId, '/api/faces', { method: 'GET' });
+  return normalizeFacesPayload(payload);
 }
 
 export async function createFace(tenantId: string, name: string) {
