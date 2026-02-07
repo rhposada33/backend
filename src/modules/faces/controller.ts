@@ -11,6 +11,8 @@ import { AuthenticationError, ValidationError } from '../../middleware/errorHand
 import { config } from '../../config/index.js';
 import * as faceService from './service.js';
 
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+
 export async function listFaces(req: AuthenticatedRequest, res: Response): Promise<void> {
   if (!req.user) {
     throw new AuthenticationError('Authentication required');
@@ -18,6 +20,41 @@ export async function listFaces(req: AuthenticatedRequest, res: Response): Promi
 
   const faces = await faceService.listFaces(req.user.tenantId);
   res.status(200).json({ data: faces });
+}
+
+export async function listTrainFaces(req: AuthenticatedRequest, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AuthenticationError('Authentication required');
+  }
+
+  if (!config.frigateMediaPath) {
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'FRIGATE_MEDIA_PATH is not configured',
+    });
+    return;
+  }
+
+  const trainDir = path.join(config.frigateMediaPath, 'clips', 'faces', 'train');
+
+  try {
+    const entries = await fs.promises.readdir(trainDir);
+    const files = entries
+      .filter((entry) => IMAGE_EXTENSIONS.has(path.extname(entry).toLowerCase()))
+      .sort((a, b) => b.localeCompare(a));
+
+    res.status(200).json({ data: files });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') {
+      res.status(200).json({ data: [] });
+      return;
+    }
+    console.error('Failed to list train faces', { trainDir, error });
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to list train faces',
+    });
+  }
 }
 
 function getContentType(filePath: string): string {
@@ -218,5 +255,33 @@ export async function renameFace(req: AuthenticatedRequest, res: Response): Prom
   }
 
   const result = await faceService.renameFace(req.user.tenantId, oldName.trim(), newName.trim());
+  res.status(200).json({ data: result });
+}
+
+export async function reprocessFace(req: AuthenticatedRequest, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AuthenticationError('Authentication required');
+  }
+
+  const { training_file, event_id, name, label, face_name } = req.body as {
+    training_file?: string;
+    event_id?: string;
+    name?: string;
+    label?: string;
+    face_name?: string;
+  };
+
+  if (!training_file && !event_id) {
+    throw new ValidationError('training_file or event_id is required');
+  }
+
+  const result = await faceService.reprocessFace(req.user.tenantId, {
+    training_file: training_file?.trim(),
+    event_id: event_id?.trim(),
+    name: name?.trim(),
+    label: label?.trim(),
+    face_name: face_name?.trim(),
+  });
+
   res.status(200).json({ data: result });
 }

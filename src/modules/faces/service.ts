@@ -144,3 +144,16 @@ export async function renameFace(tenantId: string, oldName: string, newName: str
     }),
   });
 }
+
+export async function reprocessFace(
+  tenantId: string,
+  payload: { training_file?: string; event_id?: string; name?: string; label?: string; face_name?: string }
+) {
+  return frigateRequest(tenantId, '/api/faces/reprocess', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+}
