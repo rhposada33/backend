@@ -21,6 +21,7 @@ import {
   deleteCameraAdmin,
   listTenantsAdmin,
   syncFrigateConfig,
+  getFrigateStorageOverview,
 } from './controller.js';
 
 export const cameraRouter = Router();
@@ -126,6 +127,7 @@ cameraRouter.get('/admin', authMiddleware, listAllCamerasAdmin);
 cameraRouter.post('/admin', authMiddleware, createCameraAdmin);
 cameraRouter.get('/admin/tenants', authMiddleware, listTenantsAdmin);
 cameraRouter.post('/admin/sync-frigate', authMiddleware, syncFrigateConfig);
+cameraRouter.get('/storage/overview', authMiddleware, getFrigateStorageOverview);
 
 /**
  * @swagger

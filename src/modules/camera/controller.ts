@@ -25,10 +25,14 @@
  */
 
 import { Response } from 'express';
+import http from 'http';
+import https from 'https';
+import { URL } from 'url';
 import { AuthenticatedRequest } from '../../auth/middleware.js';
 import * as cameraService from './service.js';
 import * as tenantService from '../tenant/service.js';
 import { prisma } from '../../db/client.js';
+import { config } from '../../config/index.js';
 import { regenerateFrigateConfig, regenerateFrigateConfigForServer } from '../frigateConfig/service.js';
 import * as proxyService from './proxy.js';
 
@@ -1567,6 +1571,133 @@ export async function deleteCamera(
     res.status(500).json({
       error: 'Internal Server Error',
       message: 'Failed to delete camera',
+    });
+  }
+}
+
+interface FrigateClientRequest {
+  baseUrl: string;
+  token: string | null;
+  verifyTls: boolean;
+}
+
+function frigateRequest(
+  client: FrigateClientRequest,
+  path: string
+): Promise<{ statusCode: number; body: string; contentType?: string }> {
+  const targetUrl = new URL(path, client.baseUrl);
+  const isHttps = targetUrl.protocol === 'https:';
+  const requestFn = isHttps ? https.request : http.request;
+
+  const options: https.RequestOptions = {
+    method: 'GET',
+    headers: {},
+  };
+
+  if (client.token) {
+    options.headers = {
+      Authorization: `Bearer ${client.token}`,
+      Cookie: `frigate_token=${client.token}`,
+    };
+  }
+
+  // Match existing camera proxy behavior: allow self-signed certs in development.
+  if (isHttps && (client.verifyTls === false || config.nodeEnv === 'development')) {
+    options.rejectUnauthorized = false;
+  }
+
+  return new Promise((resolve, reject) => {
+    const req = requestFn(targetUrl, options, (frigateRes) => {
+      const chunks: Buffer[] = [];
+      frigateRes.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+      frigateRes.on('end', () => {
+        resolve({
+          statusCode: frigateRes.statusCode || 500,
+          body: Buffer.concat(chunks).toString('utf-8'),
+          contentType: typeof frigateRes.headers['content-type'] === 'string'
+            ? frigateRes.headers['content-type']
+            : undefined,
+        });
+      });
+    });
+
+    req.on('error', reject);
+    req.setTimeout(20000, () => {
+      req.destroy(new Error(`Timeout requesting Frigate path: ${path}`));
+    });
+    req.end();
+  });
+}
+
+/**
+ * GET /cameras/storage/overview
+ * Aggregated storage/metrics data from Frigate for dashboard UI.
+ */
+export async function getFrigateStorageOverview(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required',
+      });
+      return;
+    }
+
+    const { getTenantFrigateClient } = await import('../frigateServer/service.js');
+    const client = await getTenantFrigateClient(req.user.tenantId);
+
+    const [statsResponse, recordingsStorageResponse, metricsResponse] = await Promise.all([
+      frigateRequest(client, '/api/stats'),
+      frigateRequest(client, '/api/recordings/storage'),
+      frigateRequest(client, '/api/metrics'),
+    ]);
+
+    if (statsResponse.statusCode >= 400) {
+      res.status(statsResponse.statusCode).json({
+        error: 'Frigate Error',
+        message: 'Failed to fetch Frigate stats',
+      });
+      return;
+    }
+
+    if (recordingsStorageResponse.statusCode >= 400) {
+      res.status(recordingsStorageResponse.statusCode).json({
+        error: 'Frigate Error',
+        message: 'Failed to fetch Frigate recordings storage',
+      });
+      return;
+    }
+
+    let statsData: unknown = {};
+    let recordingsStorageData: unknown = {};
+    try {
+      statsData = JSON.parse(statsResponse.body);
+      recordingsStorageData = JSON.parse(recordingsStorageResponse.body);
+    } catch (error) {
+      res.status(502).json({
+        error: 'Bad Gateway',
+        message: 'Frigate returned malformed JSON',
+        details: error instanceof Error ? error.message : 'Unknown parsing error',
+      });
+      return;
+    }
+
+    res.status(200).json({
+      data: {
+        stats: statsData,
+        recordingsStorage: recordingsStorageData,
+        metrics: metricsResponse.statusCode < 400 ? metricsResponse.body : '',
+        fetchedAt: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Get Frigate storage overview error:', error);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Failed to retrieve Frigate storage overview',
     });
   }
 }
