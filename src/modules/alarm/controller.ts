@@ -10,6 +10,9 @@ import * as alarmService from './service.js';
 import { config } from '../../config/index.js';
 import fs from 'fs';
 import path from 'path';
+import http from 'http';
+import https from 'https';
+import { URL } from 'url';
 
 function parseDate(value: string | undefined, fieldName: string): Date | undefined {
   if (!value) return undefined;
@@ -244,6 +247,74 @@ async function streamLocalFile(filePath: string, res: Response): Promise<void> {
   stream.pipe(res);
 }
 
+interface FrigateBinaryResponse {
+  statusCode: number;
+  contentType: string | null;
+  body: Buffer;
+}
+
+async function fetchFrigateBinary(
+  baseUrl: string,
+  token: string | null,
+  verifyTls: boolean,
+  endpointPath: string
+): Promise<FrigateBinaryResponse> {
+  const url = new URL(endpointPath, baseUrl);
+  const isHttps = url.protocol === 'https:';
+  const requestFn = isHttps ? https.request : http.request;
+
+  const options: https.RequestOptions = {
+    method: 'GET',
+    headers: {},
+  };
+
+  if (token) {
+    options.headers = {
+      Authorization: `Bearer ${token}`,
+      Cookie: `frigate_token=${token}`,
+    };
+  }
+
+  if (isHttps && (verifyTls === false || config.nodeEnv === 'development')) {
+    options.rejectUnauthorized = false;
+  }
+
+  return new Promise((resolve, reject) => {
+    const req = requestFn(url, options, (frigateRes) => {
+      const chunks: Buffer[] = [];
+      frigateRes.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+      frigateRes.on('end', () => {
+        resolve({
+          statusCode: frigateRes.statusCode || 500,
+          contentType:
+            typeof frigateRes.headers['content-type'] === 'string'
+              ? frigateRes.headers['content-type']
+              : null,
+          body: Buffer.concat(chunks),
+        });
+      });
+    });
+
+    req.on('error', reject);
+    req.setTimeout(20000, () => {
+      req.destroy(new Error(`Timeout requesting Frigate endpoint: ${endpointPath}`));
+    });
+    req.end();
+  });
+}
+
+function sendBinaryResponse(
+  res: Response,
+  payload: FrigateBinaryResponse,
+  fallbackContentType: string
+): void {
+  res.setHeader('Content-Type', payload.contentType || fallbackContentType);
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.status(200).send(payload.body);
+}
+
 /**
  * GET /alarms/:id/snapshot
  * Proxy snapshot for event from Frigate
@@ -287,9 +358,39 @@ export async function getAlarmSnapshot(
   ]);
 
   if (!filePath) {
+    // Fallback to Frigate API when local media files are missing.
+    const { getTenantFrigateClient } = await import('../frigateServer/service.js');
+    const client = await getTenantFrigateClient(req.user.tenantId);
+
+    const frameTime = parseEventTimestamp(media.frigateId, media.startTime);
+    const snapshotCandidates = [
+      frameTime !== null
+        ? `/api/${encodeURIComponent(media.cameraKey)}/recordings/${frameTime}/snapshot.jpg`
+        : null,
+      `/api/${encodeURIComponent(media.cameraKey)}/latest.jpg`,
+    ].filter((value): value is string => Boolean(value));
+
+    for (const candidate of snapshotCandidates) {
+      try {
+        const remote = await fetchFrigateBinary(
+          client.baseUrl,
+          client.token,
+          client.verifyTls,
+          candidate
+        );
+
+        if (remote.statusCode >= 200 && remote.statusCode < 300) {
+          sendBinaryResponse(res, remote, 'image/jpeg');
+          return;
+        }
+      } catch (error) {
+        console.warn('Snapshot fallback request failed', { candidate, error });
+      }
+    }
+
     res.status(404).json({
       error: 'Not Found',
-      message: 'Snapshot file not found on disk',
+      message: 'Snapshot not available for this event',
     });
     return;
   }
@@ -357,8 +458,28 @@ export async function getAlarmClip(
     }
   }
 
+  // Fallback to Frigate API event clip endpoint when local files are missing.
+  const { getTenantFrigateClient } = await import('../frigateServer/service.js');
+  const client = await getTenantFrigateClient(req.user.tenantId);
+  const remoteClipPath = `/api/events/${encodeURIComponent(media.frigateId)}/clip.mp4`;
+
+  try {
+    const remote = await fetchFrigateBinary(
+      client.baseUrl,
+      client.token,
+      client.verifyTls,
+      remoteClipPath
+    );
+    if (remote.statusCode >= 200 && remote.statusCode < 300) {
+      sendBinaryResponse(res, remote, 'video/mp4');
+      return;
+    }
+  } catch (error) {
+    console.warn('Clip fallback request failed', { remoteClipPath, error });
+  }
+
   res.status(404).json({
     error: 'Not Found',
-    message: 'Clip file not found on disk',
+    message: 'Clip not available for this event',
   });
 }
