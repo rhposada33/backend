@@ -111,6 +111,71 @@ export interface AdminCameraResponse extends CameraResponse {
   tenantName: string;
 }
 
+type CameraEntity = {
+  id: string;
+  tenantId: string;
+  frigateCameraKey: string;
+  label: string | null;
+  inputUrl: string | null;
+  isTestFeed: boolean;
+  inputArgs: string | null;
+  roles: string | null;
+  recordEnabled: boolean;
+  snapshotsEnabled: boolean;
+  snapshotsRetainDays: number;
+  motionEnabled: boolean;
+  detectWidth: number;
+  detectHeight: number;
+  detectFps: number;
+  zoneName: string;
+  zoneCoordinates: string | null;
+  zoneObjects: string | null;
+  reviewRequiredZones: string | null;
+  ip: string | null;
+  port: number | null;
+  username: string | null;
+  password: string | null;
+  isEnabled: boolean;
+  createdAt: Date;
+};
+
+function toCameraResponse(camera: CameraEntity): CameraResponse {
+  return {
+    id: camera.id,
+    tenantId: camera.tenantId,
+    frigateCameraKey: camera.frigateCameraKey,
+    label: camera.label || undefined,
+    inputUrl: camera.inputUrl || undefined,
+    isTestFeed: camera.isTestFeed,
+    inputArgs: camera.inputArgs || undefined,
+    roles: camera.roles || undefined,
+    recordEnabled: camera.recordEnabled,
+    snapshotsEnabled: camera.snapshotsEnabled,
+    snapshotsRetainDays: camera.snapshotsRetainDays,
+    motionEnabled: camera.motionEnabled,
+    detectWidth: camera.detectWidth,
+    detectHeight: camera.detectHeight,
+    detectFps: camera.detectFps,
+    zoneName: camera.zoneName,
+    zoneCoordinates: camera.zoneCoordinates || undefined,
+    zoneObjects: camera.zoneObjects || undefined,
+    reviewRequiredZones: camera.reviewRequiredZones || undefined,
+    ip: camera.ip || undefined,
+    port: camera.port ?? undefined,
+    username: camera.username || undefined,
+    password: camera.password || undefined,
+    isEnabled: camera.isEnabled,
+    createdAt: camera.createdAt,
+  };
+}
+
+function toAdminCameraResponse(camera: CameraEntity, tenantName: string): AdminCameraResponse {
+  return {
+    ...toCameraResponse(camera),
+    tenantName,
+  };
+}
+
 /**
  * Create a new camera for a tenant
  * The frigateCameraKey must be unique within the tenant
@@ -168,33 +233,7 @@ export async function createCamera(
     },
   });
 
-  return {
-    id: camera.id,
-    tenantId: camera.tenantId,
-    frigateCameraKey: camera.frigateCameraKey,
-    label: camera.label || undefined,
-    inputUrl: camera.inputUrl || undefined,
-    isTestFeed: camera.isTestFeed,
-    inputArgs: camera.inputArgs || undefined,
-    roles: camera.roles || undefined,
-    recordEnabled: camera.recordEnabled,
-    snapshotsEnabled: camera.snapshotsEnabled,
-    snapshotsRetainDays: camera.snapshotsRetainDays,
-    motionEnabled: camera.motionEnabled,
-    detectWidth: camera.detectWidth,
-    detectHeight: camera.detectHeight,
-    detectFps: camera.detectFps,
-    zoneName: camera.zoneName,
-    zoneCoordinates: camera.zoneCoordinates || undefined,
-    zoneObjects: camera.zoneObjects || undefined,
-    reviewRequiredZones: camera.reviewRequiredZones || undefined,
-    ip: camera.ip || undefined,
-    port: camera.port ?? undefined,
-    username: camera.username || undefined,
-    password: camera.password || undefined,
-    isEnabled: camera.isEnabled,
-    createdAt: camera.createdAt,
-  };
+  return toCameraResponse(camera);
 }
 
 /**
@@ -215,33 +254,7 @@ export async function getCameraById(
     return null;
   }
 
-  return {
-    id: camera.id,
-    tenantId: camera.tenantId,
-    frigateCameraKey: camera.frigateCameraKey,
-    label: camera.label || undefined,
-    inputUrl: camera.inputUrl || undefined,
-    isTestFeed: camera.isTestFeed,
-    inputArgs: camera.inputArgs || undefined,
-    roles: camera.roles || undefined,
-    recordEnabled: camera.recordEnabled,
-    snapshotsEnabled: camera.snapshotsEnabled,
-    snapshotsRetainDays: camera.snapshotsRetainDays,
-    motionEnabled: camera.motionEnabled,
-    detectWidth: camera.detectWidth,
-    detectHeight: camera.detectHeight,
-    detectFps: camera.detectFps,
-    zoneName: camera.zoneName,
-    zoneCoordinates: camera.zoneCoordinates || undefined,
-    zoneObjects: camera.zoneObjects || undefined,
-    reviewRequiredZones: camera.reviewRequiredZones || undefined,
-    ip: camera.ip || undefined,
-    port: camera.port ?? undefined,
-    username: camera.username || undefined,
-    password: camera.password || undefined,
-    isEnabled: camera.isEnabled,
-    createdAt: camera.createdAt,
-  };
+  return toCameraResponse(camera);
 }
 
 /**
@@ -264,39 +277,8 @@ export async function getCamerasByTenant(
     }),
   ]);
 
-  const cameraResponses: CameraResponse[] = [];
-  for (const camera of cameras) {
-    cameraResponses.push({
-      id: camera.id,
-      tenantId: camera.tenantId,
-      frigateCameraKey: camera.frigateCameraKey,
-      label: camera.label || undefined,
-      inputUrl: camera.inputUrl || undefined,
-      isTestFeed: camera.isTestFeed,
-      inputArgs: camera.inputArgs || undefined,
-      roles: camera.roles || undefined,
-      recordEnabled: camera.recordEnabled,
-      snapshotsEnabled: camera.snapshotsEnabled,
-      snapshotsRetainDays: camera.snapshotsRetainDays,
-      motionEnabled: camera.motionEnabled,
-      detectWidth: camera.detectWidth,
-      detectHeight: camera.detectHeight,
-      detectFps: camera.detectFps,
-      zoneName: camera.zoneName,
-      zoneCoordinates: camera.zoneCoordinates || undefined,
-      zoneObjects: camera.zoneObjects || undefined,
-      reviewRequiredZones: camera.reviewRequiredZones || undefined,
-      ip: camera.ip || undefined,
-      port: camera.port ?? undefined,
-      username: camera.username || undefined,
-      password: camera.password || undefined,
-      isEnabled: camera.isEnabled,
-      createdAt: camera.createdAt,
-    });
-  }
-
   return {
-    cameras: cameraResponses,
+    cameras: cameras.map(toCameraResponse),
     total,
   };
 }
@@ -323,34 +305,7 @@ export async function getAllCameras(
   ]);
 
   return {
-    cameras: cameras.map((camera) => ({
-      id: camera.id,
-      tenantId: camera.tenantId,
-      tenantName: camera.tenant.name,
-      frigateCameraKey: camera.frigateCameraKey,
-      label: camera.label || undefined,
-      inputUrl: camera.inputUrl || undefined,
-      isTestFeed: camera.isTestFeed,
-      inputArgs: camera.inputArgs || undefined,
-      roles: camera.roles || undefined,
-      recordEnabled: camera.recordEnabled,
-      snapshotsEnabled: camera.snapshotsEnabled,
-      snapshotsRetainDays: camera.snapshotsRetainDays,
-      motionEnabled: camera.motionEnabled,
-      detectWidth: camera.detectWidth,
-      detectHeight: camera.detectHeight,
-      detectFps: camera.detectFps,
-      zoneName: camera.zoneName,
-      zoneCoordinates: camera.zoneCoordinates || undefined,
-      zoneObjects: camera.zoneObjects || undefined,
-      reviewRequiredZones: camera.reviewRequiredZones || undefined,
-      ip: camera.ip || undefined,
-      port: camera.port ?? undefined,
-      username: camera.username || undefined,
-      password: camera.password || undefined,
-      isEnabled: camera.isEnabled,
-      createdAt: camera.createdAt,
-    })),
+    cameras: cameras.map((camera) => toAdminCameraResponse(camera, camera.tenant.name)),
     total,
   };
 }
@@ -449,34 +404,7 @@ export async function updateCameraById(
     },
   });
 
-  return {
-    id: updated.id,
-    tenantId: updated.tenantId,
-    tenantName: updated.tenant.name,
-    frigateCameraKey: updated.frigateCameraKey,
-    label: updated.label || undefined,
-    inputUrl: updated.inputUrl || undefined,
-    isTestFeed: updated.isTestFeed,
-    inputArgs: updated.inputArgs || undefined,
-    roles: updated.roles || undefined,
-    recordEnabled: updated.recordEnabled,
-    snapshotsEnabled: updated.snapshotsEnabled,
-    snapshotsRetainDays: updated.snapshotsRetainDays,
-    motionEnabled: updated.motionEnabled,
-    detectWidth: updated.detectWidth,
-    detectHeight: updated.detectHeight,
-    detectFps: updated.detectFps,
-    zoneName: updated.zoneName,
-    zoneCoordinates: updated.zoneCoordinates || undefined,
-    zoneObjects: updated.zoneObjects || undefined,
-    reviewRequiredZones: updated.reviewRequiredZones || undefined,
-    ip: updated.ip || undefined,
-    port: updated.port ?? undefined,
-    username: updated.username || undefined,
-    password: updated.password || undefined,
-    isEnabled: updated.isEnabled,
-    createdAt: updated.createdAt,
-  };
+  return toAdminCameraResponse(updated, updated.tenant.name);
 }
 
 /**
@@ -494,34 +422,7 @@ export async function getCameraByIdAdmin(cameraId: string): Promise<AdminCameraR
     throw new Error('Camera not found');
   }
 
-  return {
-    id: camera.id,
-    tenantId: camera.tenantId,
-    tenantName: camera.tenant.name,
-    frigateCameraKey: camera.frigateCameraKey,
-    label: camera.label || undefined,
-    inputUrl: camera.inputUrl || undefined,
-    isTestFeed: camera.isTestFeed,
-    inputArgs: camera.inputArgs || undefined,
-    roles: camera.roles || undefined,
-    recordEnabled: camera.recordEnabled,
-    snapshotsEnabled: camera.snapshotsEnabled,
-    snapshotsRetainDays: camera.snapshotsRetainDays,
-    motionEnabled: camera.motionEnabled,
-    detectWidth: camera.detectWidth,
-    detectHeight: camera.detectHeight,
-    detectFps: camera.detectFps,
-    zoneName: camera.zoneName,
-    zoneCoordinates: camera.zoneCoordinates || undefined,
-    zoneObjects: camera.zoneObjects || undefined,
-    reviewRequiredZones: camera.reviewRequiredZones || undefined,
-    ip: camera.ip || undefined,
-    port: camera.port ?? undefined,
-    username: camera.username || undefined,
-    password: camera.password || undefined,
-    isEnabled: camera.isEnabled,
-    createdAt: camera.createdAt,
-  };
+  return toAdminCameraResponse(camera, camera.tenant.name);
 }
 
 /**
@@ -587,33 +488,7 @@ export async function updateCamera(
       },
     });
 
-    return {
-      id: updated.id,
-      tenantId: updated.tenantId,
-      frigateCameraKey: updated.frigateCameraKey,
-      label: updated.label || undefined,
-      inputUrl: updated.inputUrl || undefined,
-      isTestFeed: updated.isTestFeed,
-      inputArgs: updated.inputArgs || undefined,
-      roles: updated.roles || undefined,
-      recordEnabled: updated.recordEnabled,
-      snapshotsEnabled: updated.snapshotsEnabled,
-      snapshotsRetainDays: updated.snapshotsRetainDays,
-      motionEnabled: updated.motionEnabled,
-      detectWidth: updated.detectWidth,
-      detectHeight: updated.detectHeight,
-      detectFps: updated.detectFps,
-      zoneName: updated.zoneName,
-      zoneCoordinates: updated.zoneCoordinates || undefined,
-      zoneObjects: updated.zoneObjects || undefined,
-      reviewRequiredZones: updated.reviewRequiredZones || undefined,
-      ip: updated.ip || undefined,
-      port: updated.port ?? undefined,
-      username: updated.username || undefined,
-      password: updated.password || undefined,
-      isEnabled: updated.isEnabled,
-      createdAt: updated.createdAt,
-    };
+    return toCameraResponse(updated);
   }
 
   // Update only label and/or isEnabled
@@ -708,37 +583,11 @@ export async function updateCamera(
       data: dataToUpdate,
     });
 
-    return {
-      id: updated.id,
-    tenantId: updated.tenantId,
-    frigateCameraKey: updated.frigateCameraKey,
-    label: updated.label || undefined,
-    inputUrl: updated.inputUrl || undefined,
-    isTestFeed: updated.isTestFeed,
-    ip: updated.ip || undefined,
-    port: updated.port ?? undefined,
-      username: updated.username || undefined,
-      password: updated.password || undefined,
-      isEnabled: updated.isEnabled,
-      createdAt: updated.createdAt,
-    };
+    return toCameraResponse(updated);
   }
 
   // No changes
-  return {
-    id: camera.id,
-    tenantId: camera.tenantId,
-    frigateCameraKey: camera.frigateCameraKey,
-    label: camera.label || undefined,
-    inputUrl: camera.inputUrl || undefined,
-    isTestFeed: camera.isTestFeed,
-    ip: camera.ip || undefined,
-    port: camera.port ?? undefined,
-    username: camera.username || undefined,
-    password: camera.password || undefined,
-    isEnabled: camera.isEnabled,
-    createdAt: camera.createdAt,
-  };
+  return toCameraResponse(camera);
 }
 
 /**
@@ -792,20 +641,7 @@ export async function getCameraByKey(
     return null;
   }
 
-  return {
-    id: camera.id,
-    tenantId: camera.tenantId,
-    frigateCameraKey: camera.frigateCameraKey,
-    label: camera.label || undefined,
-    inputUrl: camera.inputUrl || undefined,
-    isTestFeed: camera.isTestFeed,
-    ip: camera.ip || undefined,
-    port: camera.port ?? undefined,
-    username: camera.username || undefined,
-    password: camera.password || undefined,
-    isEnabled: camera.isEnabled,
-    createdAt: camera.createdAt,
-  };
+  return toCameraResponse(camera);
 }
 
 /**

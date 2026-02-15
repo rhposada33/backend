@@ -11,6 +11,10 @@ import { ValidationError } from '../../middleware/errorHandler.js';
 
 const DEFAULT_CONFIG_PATH = '/home/rafa/satelitrack/server/config/config.yaml';
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function buildCameraBlock(camera: {
   frigateCameraKey: string;
   inputUrl: string;
@@ -110,7 +114,7 @@ function buildGo2RtcSection(
 }
 
 function replaceCamerasSection(contents: string, camerasSection: string): string {
-  const regex = /^cameras:\n[\s\S]*?(?=^[A-Za-z_][\w-]*:\s*$|\Z)/m;
+  const regex = /^cameras:\s*\r?\n[\s\S]*?(?=^[A-Za-z_][\w-]*:.*$|(?![\s\S]))/m;
   if (regex.test(contents)) {
     return contents.replace(regex, camerasSection.trimEnd() + '\n');
   }
@@ -119,7 +123,7 @@ function replaceCamerasSection(contents: string, camerasSection: string): string
 }
 
 function replaceGo2RtcSection(contents: string, go2rtcSection: string): string {
-  const regex = /^go2rtc:\n[\s\S]*?(?=^[A-Za-z_][\w-]*:\s*$|\Z)/m;
+  const regex = /^go2rtc:\s*\r?\n[\s\S]*?(?=^[A-Za-z_][\w-]*:.*$|(?![\s\S]))/m;
   if (regex.test(contents)) {
     return contents.replace(regex, go2rtcSection.trimEnd() + '\n');
   }
@@ -128,7 +132,11 @@ function replaceGo2RtcSection(contents: string, go2rtcSection: string): string {
 }
 
 function replaceRootBlock(contents: string, key: string, block: string): string {
-  const regex = new RegExp(`^${key}:\\n[\\s\\S]*?(?=^[A-Za-z_][\\w-]*:\\s*$|\\Z)`, 'm');
+  const escapedKey = escapeRegex(key);
+  const regex = new RegExp(
+    `^${escapedKey}:\\s*\\r?\\n[\\s\\S]*?(?=^[A-Za-z_][\\w-]*:.*$|(?![\\s\\S]))`,
+    'm'
+  );
   const normalized = block.trimEnd();
   if (regex.test(contents)) {
     return contents.replace(regex, normalized + '\n');
@@ -138,7 +146,8 @@ function replaceRootBlock(contents: string, key: string, block: string): string 
 }
 
 function replaceRootLine(contents: string, key: string, line: string): string {
-  const regex = new RegExp(`^${key}:.*$`, 'm');
+  const escapedKey = escapeRegex(key);
+  const regex = new RegExp(`^${escapedKey}:.*$`, 'm');
   if (regex.test(contents)) {
     return contents.replace(regex, line);
   }
