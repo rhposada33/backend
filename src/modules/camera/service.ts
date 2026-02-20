@@ -43,6 +43,9 @@ export interface CreateCameraInput {
   detectWidth?: number;
   detectHeight?: number;
   detectFps?: number;
+  faceDetectionThreshold?: number;
+  faceRecognitionThreshold?: number;
+  faceMinArea?: number;
   zoneName?: string;
   zoneCoordinates?: string;
   zoneObjects?: string;
@@ -68,6 +71,9 @@ export interface UpdateCameraInput {
   detectWidth?: number | null;
   detectHeight?: number | null;
   detectFps?: number | null;
+  faceDetectionThreshold?: number | null;
+  faceRecognitionThreshold?: number | null;
+  faceMinArea?: number | null;
   zoneName?: string | null;
   zoneCoordinates?: string | null;
   zoneObjects?: string | null;
@@ -95,6 +101,9 @@ export interface CameraResponse {
   detectWidth: number;
   detectHeight: number;
   detectFps: number;
+  faceDetectionThreshold: number;
+  faceRecognitionThreshold: number;
+  faceMinArea: number;
   zoneName: string;
   zoneCoordinates?: string | null;
   zoneObjects?: string | null;
@@ -127,6 +136,9 @@ type CameraEntity = {
   detectWidth: number;
   detectHeight: number;
   detectFps: number;
+  faceDetectionThreshold: number;
+  faceRecognitionThreshold: number;
+  faceMinArea: number;
   zoneName: string;
   zoneCoordinates: string | null;
   zoneObjects: string | null;
@@ -156,6 +168,9 @@ function toCameraResponse(camera: CameraEntity): CameraResponse {
     detectWidth: camera.detectWidth,
     detectHeight: camera.detectHeight,
     detectFps: camera.detectFps,
+    faceDetectionThreshold: camera.faceDetectionThreshold,
+    faceRecognitionThreshold: camera.faceRecognitionThreshold,
+    faceMinArea: camera.faceMinArea,
     zoneName: camera.zoneName,
     zoneCoordinates: camera.zoneCoordinates || undefined,
     zoneObjects: camera.zoneObjects || undefined,
@@ -221,6 +236,9 @@ export async function createCamera(
       detectWidth: input.detectWidth ?? 320,
       detectHeight: input.detectHeight ?? 180,
       detectFps: input.detectFps ?? 5,
+      faceDetectionThreshold: input.faceDetectionThreshold ?? 0.7,
+      faceRecognitionThreshold: input.faceRecognitionThreshold ?? 0.9,
+      faceMinArea: input.faceMinArea ?? 500,
       zoneName: input.zoneName?.trim() || 'face',
       zoneCoordinates: input.zoneCoordinates?.trim() || null,
       zoneObjects: input.zoneObjects?.trim() || 'person,car,cat,dog',
@@ -367,6 +385,15 @@ export async function updateCameraById(
   }
   if (input.detectFps !== undefined) {
     dataToUpdate.detectFps = input.detectFps;
+  }
+  if (input.faceDetectionThreshold !== undefined) {
+    dataToUpdate.faceDetectionThreshold = input.faceDetectionThreshold;
+  }
+  if (input.faceRecognitionThreshold !== undefined) {
+    dataToUpdate.faceRecognitionThreshold = input.faceRecognitionThreshold;
+  }
+  if (input.faceMinArea !== undefined) {
+    dataToUpdate.faceMinArea = input.faceMinArea;
   }
   if (input.zoneName !== undefined) {
     dataToUpdate.zoneName = input.zoneName ? input.zoneName.trim() : null;
@@ -539,6 +566,15 @@ export async function updateCamera(
 
   if (input.detectFps !== undefined) {
     dataToUpdate.detectFps = input.detectFps;
+  }
+  if (input.faceDetectionThreshold !== undefined) {
+    dataToUpdate.faceDetectionThreshold = input.faceDetectionThreshold;
+  }
+  if (input.faceRecognitionThreshold !== undefined) {
+    dataToUpdate.faceRecognitionThreshold = input.faceRecognitionThreshold;
+  }
+  if (input.faceMinArea !== undefined) {
+    dataToUpdate.faceMinArea = input.faceMinArea;
   }
 
   if (input.zoneName !== undefined) {

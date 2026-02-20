@@ -155,7 +155,14 @@ function replaceRootLine(contents: string, key: string, line: string): string {
   return `${contents.trimEnd()}\n\n${line}\n`;
 }
 
-function ensureGlobalFrigateConfig(contents: string): string {
+function ensureGlobalFrigateConfig(
+  contents: string,
+  faceRecognition: {
+    detectionThreshold: number;
+    recognitionThreshold: number;
+    minArea: number;
+  }
+): string {
   let updated = contents;
   updated = replaceRootBlock(updated, 'detect', `detect:\n  enabled: true`);
   updated = replaceRootLine(updated, 'version', 'version: 0.16-0');
@@ -167,7 +174,7 @@ function ensureGlobalFrigateConfig(contents: string): string {
   updated = replaceRootBlock(
     updated,
     'face_recognition',
-    `face_recognition:\n  enabled: true\n  model_size: small`
+    `face_recognition:\n  enabled: true\n  model_size: small\n  detection_threshold: ${faceRecognition.detectionThreshold}\n  recognition_threshold: ${faceRecognition.recognitionThreshold}\n  min_area: ${faceRecognition.minArea}`
   );
   updated = replaceRootBlock(updated, 'lpr', `lpr:\n  enabled: false`);
   updated = replaceRootBlock(updated, 'mqtt', `mqtt:\n  enabled: true\n  host: mqtt`);
@@ -198,6 +205,9 @@ export async function regenerateFrigateConfig(): Promise<{ path: string; count: 
       detectWidth: true,
       detectHeight: true,
       detectFps: true,
+      faceDetectionThreshold: true,
+      faceRecognitionThreshold: true,
+      faceMinArea: true,
     },
   });
 
@@ -234,12 +244,25 @@ export async function regenerateFrigateConfig(): Promise<{ path: string; count: 
     }))
   );
 
+  const faceRecognitionConfig = cameras[0]
+    ? {
+        detectionThreshold: cameras[0].faceDetectionThreshold,
+        recognitionThreshold: cameras[0].faceRecognitionThreshold,
+        minArea: cameras[0].faceMinArea,
+      }
+    : {
+        detectionThreshold: 0.7,
+        recognitionThreshold: 0.9,
+        minArea: 500,
+      };
+
   const contents = await fs.readFile(configPath, 'utf8');
   const updated = ensureGlobalFrigateConfig(
     replaceGo2RtcSection(
       replaceCamerasSection(contents, camerasSection),
       go2rtcSection
-    )
+    ),
+    faceRecognitionConfig
   );
 
   await fs.writeFile(configPath, updated, 'utf8');
@@ -284,6 +307,9 @@ export async function regenerateFrigateConfigForServer(
       detectWidth: true,
       detectHeight: true,
       detectFps: true,
+      faceDetectionThreshold: true,
+      faceRecognitionThreshold: true,
+      faceMinArea: true,
     },
   });
 
@@ -320,12 +346,25 @@ export async function regenerateFrigateConfigForServer(
     }))
   );
 
+  const faceRecognitionConfig = cameras[0]
+    ? {
+        detectionThreshold: cameras[0].faceDetectionThreshold,
+        recognitionThreshold: cameras[0].faceRecognitionThreshold,
+        minArea: cameras[0].faceMinArea,
+      }
+    : {
+        detectionThreshold: 0.7,
+        recognitionThreshold: 0.9,
+        minArea: 500,
+      };
+
   const contents = await fs.readFile(server.configPath, 'utf8');
   const updated = ensureGlobalFrigateConfig(
     replaceGo2RtcSection(
       replaceCamerasSection(contents, camerasSection),
       go2rtcSection
-    )
+    ),
+    faceRecognitionConfig
   );
 
   await fs.writeFile(server.configPath, updated, 'utf8');

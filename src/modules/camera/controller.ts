@@ -64,6 +64,9 @@ export async function createCamera(
       detectWidth,
       detectHeight,
       detectFps,
+      faceDetectionThreshold,
+      faceRecognitionThreshold,
+      faceMinArea,
       zoneName,
       zoneCoordinates,
       zoneObjects,
@@ -243,6 +246,36 @@ export async function createCamera(
       return;
     }
 
+    if (
+      faceDetectionThreshold !== undefined &&
+      (typeof faceDetectionThreshold !== 'number' || Number.isNaN(faceDetectionThreshold))
+    ) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'faceDetectionThreshold must be a number',
+      });
+      return;
+    }
+
+    if (
+      faceRecognitionThreshold !== undefined &&
+      (typeof faceRecognitionThreshold !== 'number' || Number.isNaN(faceRecognitionThreshold))
+    ) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'faceRecognitionThreshold must be a number',
+      });
+      return;
+    }
+
+    if (faceMinArea !== undefined && (typeof faceMinArea !== 'number' || Number.isNaN(faceMinArea))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'faceMinArea must be a number',
+      });
+      return;
+    }
+
     if (zoneName !== undefined && typeof zoneName !== 'string') {
       res.status(400).json({
         error: 'Bad Request',
@@ -293,6 +326,9 @@ export async function createCamera(
       detectWidth,
       detectHeight,
       detectFps,
+      faceDetectionThreshold,
+      faceRecognitionThreshold,
+      faceMinArea,
       zoneName,
       zoneCoordinates,
       zoneObjects,
@@ -469,6 +505,9 @@ export async function createCameraAdmin(
       detectWidth,
       detectHeight,
       detectFps,
+      faceDetectionThreshold,
+      faceRecognitionThreshold,
+      faceMinArea,
       zoneName,
       zoneCoordinates,
       zoneObjects,
@@ -647,6 +686,36 @@ export async function createCameraAdmin(
       return;
     }
 
+    if (
+      faceDetectionThreshold !== undefined &&
+      (typeof faceDetectionThreshold !== 'number' || Number.isNaN(faceDetectionThreshold))
+    ) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'faceDetectionThreshold must be a number',
+      });
+      return;
+    }
+
+    if (
+      faceRecognitionThreshold !== undefined &&
+      (typeof faceRecognitionThreshold !== 'number' || Number.isNaN(faceRecognitionThreshold))
+    ) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'faceRecognitionThreshold must be a number',
+      });
+      return;
+    }
+
+    if (faceMinArea !== undefined && (typeof faceMinArea !== 'number' || Number.isNaN(faceMinArea))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'faceMinArea must be a number',
+      });
+      return;
+    }
+
     if (zoneName !== undefined && typeof zoneName !== 'string') {
       res.status(400).json({
         error: 'Bad Request',
@@ -697,6 +766,9 @@ export async function createCameraAdmin(
       detectWidth,
       detectHeight,
       detectFps,
+      faceDetectionThreshold,
+      faceRecognitionThreshold,
+      faceMinArea,
       zoneName,
       zoneCoordinates,
       zoneObjects,
@@ -782,6 +854,9 @@ export async function updateCameraAdmin(
       detectWidth,
       detectHeight,
       detectFps,
+      faceDetectionThreshold,
+      faceRecognitionThreshold,
+      faceMinArea,
       zoneName,
       zoneCoordinates,
       zoneObjects,
@@ -807,6 +882,9 @@ export async function updateCameraAdmin(
       detectWidth === undefined &&
       detectHeight === undefined &&
       detectFps === undefined &&
+      faceDetectionThreshold === undefined &&
+      faceRecognitionThreshold === undefined &&
+      faceMinArea === undefined &&
       zoneName === undefined &&
       zoneCoordinates === undefined &&
       zoneObjects === undefined &&
@@ -966,6 +1044,36 @@ export async function updateCameraAdmin(
       return;
     }
 
+    if (
+      faceDetectionThreshold !== undefined &&
+      (typeof faceDetectionThreshold !== 'number' || Number.isNaN(faceDetectionThreshold))
+    ) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'faceDetectionThreshold must be a number',
+      });
+      return;
+    }
+
+    if (
+      faceRecognitionThreshold !== undefined &&
+      (typeof faceRecognitionThreshold !== 'number' || Number.isNaN(faceRecognitionThreshold))
+    ) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'faceRecognitionThreshold must be a number',
+      });
+      return;
+    }
+
+    if (faceMinArea !== undefined && (typeof faceMinArea !== 'number' || Number.isNaN(faceMinArea))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'faceMinArea must be a number',
+      });
+      return;
+    }
+
     if (zoneName !== undefined && typeof zoneName !== 'string') {
       res.status(400).json({
         error: 'Bad Request',
@@ -1017,6 +1125,9 @@ export async function updateCameraAdmin(
       detectWidth,
       detectHeight,
       detectFps,
+      faceDetectionThreshold,
+      faceRecognitionThreshold,
+      faceMinArea,
       zoneName,
       zoneCoordinates,
       zoneObjects,
@@ -1276,6 +1387,9 @@ export async function updateCamera(
       detectWidth,
       detectHeight,
       detectFps,
+      faceDetectionThreshold,
+      faceRecognitionThreshold,
+      faceMinArea,
       zoneName,
       zoneCoordinates,
       zoneObjects,
@@ -1302,6 +1416,9 @@ export async function updateCamera(
       detectWidth === undefined &&
       detectHeight === undefined &&
       detectFps === undefined &&
+      faceDetectionThreshold === undefined &&
+      faceRecognitionThreshold === undefined &&
+      faceMinArea === undefined &&
       zoneName === undefined &&
       zoneCoordinates === undefined &&
       zoneObjects === undefined &&
@@ -1446,6 +1563,36 @@ export async function updateCamera(
       return;
     }
 
+    if (
+      faceDetectionThreshold !== undefined &&
+      (typeof faceDetectionThreshold !== 'number' || Number.isNaN(faceDetectionThreshold))
+    ) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'faceDetectionThreshold must be a number',
+      });
+      return;
+    }
+
+    if (
+      faceRecognitionThreshold !== undefined &&
+      (typeof faceRecognitionThreshold !== 'number' || Number.isNaN(faceRecognitionThreshold))
+    ) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'faceRecognitionThreshold must be a number',
+      });
+      return;
+    }
+
+    if (faceMinArea !== undefined && (typeof faceMinArea !== 'number' || Number.isNaN(faceMinArea))) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'faceMinArea must be a number',
+      });
+      return;
+    }
+
     if (zoneName !== undefined && typeof zoneName !== 'string') {
       res.status(400).json({
         error: 'Bad Request',
@@ -1497,6 +1644,9 @@ export async function updateCamera(
       detectWidth,
       detectHeight,
       detectFps,
+      faceDetectionThreshold,
+      faceRecognitionThreshold,
+      faceMinArea,
       zoneName,
       zoneCoordinates,
       zoneObjects,

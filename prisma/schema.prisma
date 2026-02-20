@@ -12,30 +12,30 @@ datasource db {
 }
 
 model Tenant {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   description String?
   createdAt   DateTime @default(now())
-  
-  users   User[]
-  cameras Camera[]
-  events  Event[]
-  reviews Review[]
+
+  users            User[]
+  cameras          Camera[]
+  events           Event[]
+  reviews          Review[]
   availabilityLogs AvailabilityLog[]
-  frigateServers FrigateServer[]
+  frigateServers   FrigateServer[]
 
   @@map("tenants")
 }
 
 model User {
-  id        String @id @default(cuid())
-  email     String @unique
+  id        String          @id @default(cuid())
+  email     String          @unique
   password  String
-  role      UserRole @default(CLIENT)
+  role      UserRole        @default(CLIENT)
   theme     ThemePreference @default(DARK)
   tenantId  String
-  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
 
   @@map("users")
 }
@@ -51,34 +51,37 @@ enum ThemePreference {
 }
 
 model Camera {
-  id                 String @id @default(cuid())
-  tenantId           String
-  tenant             Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  frigateCameraKey   String // Frigate camera name/identifier
-  label              String?
-  inputUrl           String?
-  isTestFeed         Boolean @default(false)
-  inputArgs          String?
-  roles              String?
-  recordEnabled      Boolean @default(true)
-  snapshotsEnabled   Boolean @default(true)
-  snapshotsRetainDays Int @default(10)
-  motionEnabled      Boolean @default(true)
-  detectWidth        Int @default(320)
-  detectHeight       Int @default(180)
-  detectFps          Int @default(5)
-  zoneName           String @default("face")
-  zoneCoordinates    String?
-  zoneObjects        String? @default("person,car,cat,dog")
-  reviewRequiredZones String?
-  ip                 String?
-  port               Int?
-  username           String?
-  password           String?
-  isEnabled          Boolean @default(true)
-  createdAt          DateTime @default(now())
-  
-  events Event[]
+  id                       String   @id @default(cuid())
+  tenantId                 String
+  tenant                   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  frigateCameraKey         String // Frigate camera name/identifier
+  label                    String?
+  inputUrl                 String?
+  isTestFeed               Boolean  @default(false)
+  inputArgs                String?
+  roles                    String?
+  recordEnabled            Boolean  @default(true)
+  snapshotsEnabled         Boolean  @default(true)
+  snapshotsRetainDays      Int      @default(10)
+  motionEnabled            Boolean  @default(true)
+  detectWidth              Int      @default(320)
+  detectHeight             Int      @default(180)
+  detectFps                Int      @default(5)
+  faceDetectionThreshold   Float    @default(0.7)
+  faceRecognitionThreshold Float    @default(0.9)
+  faceMinArea              Int      @default(500)
+  zoneName                 String   @default("face")
+  zoneCoordinates          String?
+  zoneObjects              String?  @default("person,car,cat,dog")
+  reviewRequiredZones      String?
+  ip                       String?
+  port                     Int?
+  username                 String?
+  password                 String?
+  isEnabled                Boolean  @default(true)
+  createdAt                DateTime @default(now())
+
+  events  Event[]
   reviews Review[]
 
   @@unique([tenantId, frigateCameraKey])
@@ -86,24 +89,24 @@ model Camera {
 }
 
 model Event {
-  id         String @id @default(cuid())
-  tenantId   String
-  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  cameraId   String
-  camera     Camera @relation(fields: [cameraId], references: [id], onDelete: Cascade)
-  frigateId  String // event_id from MQTT
-  type       String
-  label      String?
-  subLabel   String?
-  status     String @default("unresolved")
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cameraId       String
+  camera         Camera    @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  frigateId      String // event_id from MQTT
+  type           String
+  label          String?
+  subLabel       String?
+  status         String    @default("unresolved")
   acknowledgedAt DateTime?
-  resolvedAt DateTime?
-  hasSnapshot Boolean @default(false)
-  hasClip     Boolean @default(false)
-  startTime   Float?
-  endTime     Float?
-  rawPayload  Json
-  createdAt   DateTime @default(now())
+  resolvedAt     DateTime?
+  hasSnapshot    Boolean   @default(false)
+  hasClip        Boolean   @default(false)
+  startTime      Float?
+  endTime        Float?
+  rawPayload     Json
+  createdAt      DateTime  @default(now())
 
   @@unique([tenantId, frigateId])
   @@index([tenantId])
@@ -113,18 +116,18 @@ model Event {
 }
 
 model Review {
-  id         String @id @default(cuid())
+  id         String    @id @default(cuid())
   tenantId   String
-  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   cameraId   String
-  camera     Camera @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  camera     Camera    @relation(fields: [cameraId], references: [id], onDelete: Cascade)
   reviewId   String
   cameraName String
   severity   String
-  retracted  Boolean @default(false)
+  retracted  Boolean   @default(false)
   timestamp  DateTime?
   rawPayload Json
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   @@unique([tenantId, reviewId])
   @@index([tenantId])
@@ -134,9 +137,9 @@ model Review {
 }
 
 model AvailabilityLog {
-  id         String @id @default(cuid())
+  id         String   @id @default(cuid())
   tenantId   String
-  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   available  Boolean
   timestamp  DateTime
   rawPayload Json
@@ -148,19 +151,19 @@ model AvailabilityLog {
 }
 
 model FrigateServer {
-  id         String  @id @default(cuid())
+  id         String   @id @default(cuid())
   tenantId   String
-  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name       String
   baseUrl    String
-  authType   String  @default("none") // none | token | login
+  authType   String   @default("none") // none | token | login
   username   String?
   password   String?
   token      String?
   configPath String?
-  verifyTls  Boolean @default(true)
-  isEnabled  Boolean @default(true)
-  isDefault  Boolean @default(false)
+  verifyTls  Boolean  @default(true)
+  isEnabled  Boolean  @default(true)
+  isDefault  Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
