@@ -36,6 +36,7 @@ export interface UserListItem {
   email: string;
   role: 'ADMIN' | 'CLIENT';
   tenantId: string;
+  tenantName?: string;
   createdAt: Date;
 }
 
@@ -53,6 +54,18 @@ export interface CreateUserInput {
 export interface UpdateUserInput {
   email?: string;
   role?: 'ADMIN' | 'CLIENT';
+  tenantId?: string;
+}
+
+async function ensureTenantExists(tenantId: string): Promise<void> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { id: true },
+  });
+
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
 }
 
 /**
@@ -196,18 +209,25 @@ export async function getUserById(userId: string) {
 /**
  * List users for a tenant
  */
-export async function listUsers(tenantId: string): Promise<UserListItem[]> {
-  return prisma.user.findMany({
-    where: { tenantId },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      tenantId: true,
-      createdAt: true,
+export async function listUsers(tenantId?: string): Promise<UserListItem[]> {
+  const users = await prisma.user.findMany({
+    where: tenantId ? { tenantId } : undefined,
+    include: {
+      tenant: {
+        select: { name: true },
+      },
     },
     orderBy: { createdAt: 'desc' },
   });
+
+  return users.map((user) => ({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    tenantId: user.tenantId,
+    tenantName: user.tenant.name,
+    createdAt: user.createdAt,
+  }));
 }
 
 /**
@@ -222,23 +242,32 @@ export async function createUserForTenant(input: CreateUserInput): Promise<UserL
     throw new Error('User already exists');
   }
 
+  await ensureTenantExists(input.tenantId);
+
   const hashedPassword = await hashPassword(input.password);
 
-  return prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       email: input.email,
       password: hashedPassword,
       tenantId: input.tenantId,
       role: input.role,
     },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      tenantId: true,
-      createdAt: true,
+    include: {
+      tenant: {
+        select: { name: true },
+      },
     },
   });
+
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    tenantId: user.tenantId,
+    tenantName: user.tenant.name,
+    createdAt: user.createdAt,
+  };
 }
 
 /**
@@ -246,11 +275,15 @@ export async function createUserForTenant(input: CreateUserInput): Promise<UserL
  */
 export async function updateUserForTenant(
   userId: string,
-  tenantId: string,
   input: UpdateUserInput
 ): Promise<UserListItem> {
-  const existingUser = await prisma.user.findFirst({
-    where: { id: userId, tenantId },
+  const existingUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      tenantId: true,
+    },
   });
 
   if (!existingUser) {
@@ -266,28 +299,41 @@ export async function updateUserForTenant(
     }
   }
 
-  return prisma.user.update({
+  if (input.tenantId && input.tenantId !== existingUser.tenantId) {
+    await ensureTenantExists(input.tenantId);
+  }
+
+  const updatedUser = await prisma.user.update({
     where: { id: userId },
     data: {
       ...(input.email ? { email: input.email } : {}),
       ...(input.role ? { role: input.role } : {}),
+      ...(input.tenantId ? { tenantId: input.tenantId } : {}),
     },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      tenantId: true,
-      createdAt: true,
+    include: {
+      tenant: {
+        select: { name: true },
+      },
     },
   });
+
+  return {
+    id: updatedUser.id,
+    email: updatedUser.email,
+    role: updatedUser.role,
+    tenantId: updatedUser.tenantId,
+    tenantName: updatedUser.tenant.name,
+    createdAt: updatedUser.createdAt,
+  };
 }
 
 /**
  * Delete a user for a tenant
  */
-export async function deleteUserForTenant(userId: string, tenantId: string): Promise<void> {
-  const existingUser = await prisma.user.findFirst({
-    where: { id: userId, tenantId },
+export async function deleteUserForTenant(userId: string): Promise<void> {
+  const existingUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
   });
 
   if (!existingUser) {

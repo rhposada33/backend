@@ -224,7 +224,7 @@ export async function updateMyTheme(req: AuthenticatedRequest, res: Response): P
 
 /**
  * GET /users
- * List users for the authenticated tenant (admin only)
+ * List users across tenants (admin only)
  */
 export async function listTenantUsers(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -245,7 +245,9 @@ export async function listTenantUsers(req: AuthenticatedRequest, res: Response):
       return;
     }
 
-    const users = await listUsers(req.user.tenantId);
+    const tenantIdQuery = req.query.tenantId;
+    const tenantId = typeof tenantIdQuery === 'string' && tenantIdQuery.trim() ? tenantIdQuery : undefined;
+    const users = await listUsers(tenantId);
     res.status(200).json({
       data: users,
     });
@@ -262,11 +264,12 @@ interface CreateUserRequest {
   email: string;
   password: string;
   role?: 'ADMIN' | 'CLIENT';
+  tenantId?: string;
 }
 
 /**
  * POST /users
- * Create a new user for the authenticated tenant (admin only)
+ * Create a new user and link it to a tenant (admin only)
  */
 export async function createTenantUser(
   req: AuthenticatedRequest,
@@ -290,7 +293,7 @@ export async function createTenantUser(
       return;
     }
 
-    const { email, password, role } = req.body as CreateUserRequest;
+    const { email, password, role, tenantId } = req.body as CreateUserRequest;
 
     if (!email || !password) {
       res.status(400).json({
@@ -325,10 +328,19 @@ export async function createTenantUser(
       return;
     }
 
+    const tenantForUser = tenantId ?? req.user.tenantId;
+    if (!tenantForUser || typeof tenantForUser !== 'string') {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'tenantId is required',
+      });
+      return;
+    }
+
     const user = await createUserForTenant({
       email,
       password,
-      tenantId: req.user.tenantId,
+      tenantId: tenantForUser,
       role: normalizedRole,
     });
 
@@ -345,6 +357,14 @@ export async function createTenantUser(
       return;
     }
 
+    if (error instanceof Error && error.message === 'Tenant not found') {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'Tenant not found',
+      });
+      return;
+    }
+
     console.error('Create user error:', error);
     res.status(500).json({
       error: 'Internal Server Error',
@@ -356,11 +376,12 @@ export async function createTenantUser(
 interface UpdateUserRequest {
   email?: string;
   role?: 'ADMIN' | 'CLIENT';
+  tenantId?: string;
 }
 
 /**
  * PATCH /users/:id
- * Update a user for the authenticated tenant (admin only)
+ * Update a user and optionally change tenant (admin only)
  */
 export async function updateTenantUser(
   req: AuthenticatedRequest,
@@ -385,7 +406,7 @@ export async function updateTenantUser(
     }
 
     const { id } = req.params;
-    const { email, role } = req.body as UpdateUserRequest;
+    const { email, role, tenantId } = req.body as UpdateUserRequest;
 
     if (email && !EMAIL_REGEX.test(email)) {
       res.status(400).json({
@@ -403,9 +424,18 @@ export async function updateTenantUser(
       return;
     }
 
-    const updatedUser = await updateUserForTenant(id, req.user.tenantId, {
+    if (tenantId !== undefined && (typeof tenantId !== 'string' || tenantId.trim().length === 0)) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'tenantId must be a non-empty string',
+      });
+      return;
+    }
+
+    const updatedUser = await updateUserForTenant(id, {
       email,
       role,
+      tenantId: tenantId?.trim(),
     });
 
     res.status(200).json({
@@ -429,6 +459,14 @@ export async function updateTenantUser(
       return;
     }
 
+    if (error instanceof Error && error.message === 'Tenant not found') {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'Tenant not found',
+      });
+      return;
+    }
+
     console.error('Update user error:', error);
     res.status(500).json({
       error: 'Internal Server Error',
@@ -439,7 +477,7 @@ export async function updateTenantUser(
 
 /**
  * DELETE /users/:id
- * Delete a user for the authenticated tenant (admin only)
+ * Delete a user (admin only)
  */
 export async function deleteTenantUser(
   req: AuthenticatedRequest,
@@ -472,7 +510,7 @@ export async function deleteTenantUser(
       return;
     }
 
-    await deleteUserForTenant(id, req.user.tenantId);
+    await deleteUserForTenant(id);
 
     res.status(200).json({
       message: 'User deleted successfully',

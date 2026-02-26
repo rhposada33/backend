@@ -36,7 +36,6 @@ export async function authMiddleware(
 
     // Verify JWT token
     const payload = verifyToken(token);
-    req.user = payload;
 
     // Optionally: Verify user still exists in database
     const user = await prisma.user.findUnique({
@@ -60,6 +59,13 @@ export async function authMiddleware(
       });
       return;
     }
+
+    req.user = {
+      ...payload,
+      tenantId: user.tenantId,
+      role: user.role,
+      email: user.email,
+    };
 
     next();
   } catch (error) {
